@@ -1,0 +1,25 @@
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+/.venv
+/.env
+**/.venv
+**/.env
+
+# PDF files to ignore in any subfolder
+**/*.pdf
+**/*.docx
+**/*.xlsx
+**/*assignment*
+
+
+# Common temporary and OS files
+*.log
+*.tmp
+*~
+.DS_Store
+Thumbs.db

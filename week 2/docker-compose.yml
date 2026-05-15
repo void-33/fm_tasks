@@ -1,0 +1,70 @@
+version: '3.8'
+ 
+services:
+ 
+  # -------------------------------------------------------
+  # "db" is the name of our database service (container)
+  # -------------------------------------------------------
+  db:
+    # Use the official PostgreSQL image from Docker Hub
+    # Think of this like downloading a ready-made PostgreSQL app
+    image: postgres:latest
+ 
+    # Give the running container a friendly name
+    container_name: classicmodels_db
+ 
+    # Load environment variables from our .env file
+    # This is how Docker reads your username, password, etc.
+    env_file:
+      - .env
+ 
+    # Pass the .env variables into the PostgreSQL container
+    # PostgreSQL specifically looks for these variable names on startup
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+ 
+    # Port mapping: YOUR_COMPUTER:INSIDE_CONTAINER
+    # This lets you access the database from your machine
+    # Left side = port on your computer
+    # Right side = port inside the Docker container
+    ports:
+      - "${POSTGRES_PORT}:5432"
+ 
+    # Volume mapping - this is the KEY step that auto-runs seed.sql
+    # We are linking our local seed.sql file to a special folder
+    # inside the container: /docker-entrypoint-initdb.d/
+    # PostgreSQL automatically runs any .sql files it finds there
+    # on the FIRST startup (when the database is being created)
+    volumes:
+      - ./seed.sql:/docker-entrypoint-initdb.d/seed.sql:z
+ 
+    # Restart the container automatically if it crashes
+    restart: always
+
+  # -------------------------------------------------------
+  # FastAPI app container
+  # -------------------------------------------------------
+  api:
+    build: .
+    container_name: classicmodels_api
+
+    # Load the same .env for DB credentials
+    env_file:
+      - .env
+
+    # Override host/port to reach the db container
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+
+    # Expose FastAPI to your machine
+    ports:
+      - "8000:8000"
+
+    # Ensure DB starts before the API
+    depends_on:
+      - db
+
+    restart: always
