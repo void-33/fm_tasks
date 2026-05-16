@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 class AIQueryRequest(BaseModel):
@@ -5,6 +7,10 @@ class AIQueryRequest(BaseModel):
 
 class SQLQueryRequest(BaseModel):
     sql: str
+
+
+class AgentSQLRequest(BaseModel):
+    question: str
 
 
 class BenchmarkRequest(BaseModel):
@@ -32,3 +38,10 @@ class SQLQueryResult(BaseModel):
     row_count : int
     result: list[dict]
     status: str 
+
+
+class AgentSQLResponse(BaseModel):
+    sql: str
+    result: Any
+    summary: str
+    status: str
