@@ -8,7 +8,10 @@ class SQLQueryRequest(BaseModel):
 
 
 class BenchmarkRequest(BaseModel):
-    questions: list[str]
+    file_path: str = "SQL_QUESTIONS_with_SQL.xlsx"
+    sheet_name: str | None = None
+    limit: int | None = 50
+    max_concurrency: int = 5
 
 
 class PipelineResult(BaseModel):
