@@ -6,18 +6,32 @@ Natural language → structured decomposition → SQL → PostgreSQL execution w
 
 ```
 project/
-├── database.py        # DB connection + schema description
-├── sql_generator.py   # Claude API: generate SQL + fix broken SQL
-├── validator.py       # Safety check (SELECT-only enforcement)
-├── executor.py        # Run SQL against PostgreSQL
-├── main.py            # FastAPI app + pipeline orchestration
+├── main.py                # FastAPI app entry point
+├── routes/                # API endpoints
+│   ├── benchmark.py
+│   ├── health.py
+│   ├── logs.py
+│   ├── query.py
+│   └── router.py
+├── services/              # Business logic and integrations
+│   ├── benchmark_service.py
+│   ├── db_service.py
+│   ├── llm_sql_service.py
+│   ├── pipeline_service.py
+│   ├── sql_execution_service.py
+│   └── sql_validation_service.py
+├── utils/                 # Helpers for benchmark comparison/Excel parsing
+│   ├── benchmark_compare.py
+│   └── benchmark_excel.py
+├── config/                # App configuration constants
+│   └── schema.py
 ├── prompts/
-│   ├── system.txt     # LLM prompt for SQL generation
-│   └── fix.txt        # LLM prompt for auto-fix on error
-├── logs/              # JSON execution logs (auto-created)
-├── .env               # DB + API key config
+│   ├── system.txt         # LLM prompt for SQL generation
+│   └── fix.txt            # LLM prompt for auto-fix on error
+├── logs/                  # JSON execution logs (auto-created)
+├── .env                   # DB + API key config
 ├── requirements.txt
-└── docker-compose.yml # Spin up PostgreSQL with seed data
+└── docker-compose.yml     # Spin up PostgreSQL with seed data
 ```
 
 ## Setup

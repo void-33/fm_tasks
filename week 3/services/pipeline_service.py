@@ -1,20 +1,15 @@
 import json
-import psycopg2
-
 import time
 from datetime import datetime
-
 from typing import Any
+
+import psycopg2
 
 from logger import logger, log_file
 from models import PipelineResult
-
-
-from executor import execute_sql
-from sql_generator import fix_sql, generate_sql
-from validator import validate_sql
-
-# ── Core pipeline ─────────────────────────────────────────────────────────────
+from services.llm_sql_service import fix_sql, generate_sql
+from services.sql_execution_service import execute_sql
+from services.sql_validation_service import validate_sql
 
 
 def run_pipeline(question: str) -> PipelineResult:
@@ -31,23 +26,28 @@ def run_pipeline(question: str) -> PipelineResult:
     error_msg: str | None = None
     fix_explanation: str | None = None
 
-    # ── Step 1: Generate SQL via LLM ──────────────────────────────────────────
     try:
         logger.info("Step 1 → Calling Groq for decomposition + SQL generation")
         decomposition = generate_sql(question)
         sql = decomposition["sql"]
         logger.info(f"Step 1 ✓  SQL: {sql}")
-    except Exception as e:
-        logger.error(f"Step 1 ✗  Generation failed: {e}")
+    except Exception as exc:
+        logger.error(f"Step 1 ✗  Generation failed: {exc}")
         latency = int((time.time() - start) * 1000)
-        _write_log(question, "", [], "failed", str(e), latency)
+        _write_log(question, "", [], "failed", str(exc), latency)
         return PipelineResult(
-            question=question, decomposition=None, sql="",
-            result=[], status="failed", retried=False, retry_fixed=False,
-            error=str(e), fix_explanation=None, latency_ms=latency,
+            question=question,
+            decomposition=None,
+            sql="",
+            result=[],
+            status="failed",
+            retried=False,
+            retry_fixed=False,
+            error=str(exc),
+            fix_explanation=None,
+            latency_ms=latency,
         )
 
-    # ── Step 2: Validate (safety check) ──────────────────────────────────────
     validation = validate_sql(sql)
     if not validation.valid:
         msg = f"Validation failed: {validation.reason}"
@@ -55,13 +55,19 @@ def run_pipeline(question: str) -> PipelineResult:
         latency = int((time.time() - start) * 1000)
         _write_log(question, sql, [], "failed", msg, latency)
         return PipelineResult(
-            question=question, decomposition=decomposition, sql=sql,
-            result=[], status="failed", retried=False, retry_fixed=False,
-            error=msg, fix_explanation=None, latency_ms=latency,
+            question=question,
+            decomposition=decomposition,
+            sql=sql,
+            result=[],
+            status="failed",
+            retried=False,
+            retry_fixed=False,
+            error=msg,
+            fix_explanation=None,
+            latency_ms=latency,
         )
     logger.info("Step 2 ✓  Validation passed")
 
-    # ── Step 3: Execute ───────────────────────────────────────────────────────
     try:
         logger.info("Step 3 → Executing SQL against PostgreSQL")
         result = execute_sql(sql)
@@ -70,7 +76,6 @@ def run_pipeline(question: str) -> PipelineResult:
         error_msg = str(exec_err)
         logger.warning(f"Step 3 ✗  Execution failed: {error_msg}")
 
-        # ── Step 4: Auto-fix + retry (max 1) ─────────────────────────────────
         retried = True
         logger.info("Step 4 → Auto-fix: asking Groq to correct the SQL")
         try:
@@ -82,7 +87,9 @@ def run_pipeline(question: str) -> PipelineResult:
 
             fix_validation = validate_sql(fixed_sql)
             if not fix_validation.valid:
-                raise ValueError(f"Fixed SQL failed validation: {fix_validation.reason}")
+                raise ValueError(
+                    f"Fixed SQL failed validation: {fix_validation.reason}"
+                )
 
             result = execute_sql(fixed_sql)
             sql = fixed_sql
@@ -113,7 +120,6 @@ def run_pipeline(question: str) -> PipelineResult:
 
 
 def _write_log(question: str, sql: str, result: list, status: str, error: Any, latency: int):
-    """Append a JSON log entry to today's log file."""
     entry = {
         "timestamp": datetime.now().isoformat(),
         "question": question,
@@ -123,5 +129,5 @@ def _write_log(question: str, sql: str, result: list, status: str, error: Any, l
         "error": error,
         "latency_ms": latency,
     }
-    with open(log_file, "a") as f:
-        f.write(json.dumps(entry) + "\n")
+    with open(log_file, "a") as handle:
+        handle.write(json.dumps(entry) + "\n")

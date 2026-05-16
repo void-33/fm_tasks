@@ -2,13 +2,14 @@ import json
 import os
 import re
 from pathlib import Path
-from groq import Groq
-from database import SCHEMA_DESCRIPTION
 
-client = Groq()
+from groq import Groq
+
+from config.schema import SCHEMA_DESCRIPTION
+
 model = "llama-3.3-70b-versatile"
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
+PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
 
 def _load_prompt(name: str) -> str:
@@ -16,9 +17,17 @@ def _load_prompt(name: str) -> str:
 
 
 def _parse_json(raw: str) -> dict:
-    """Strip markdown fences if present, then parse JSON."""
     cleaned = re.sub(r"```(?:json)?", "", raw).replace("```", "").strip()
     return json.loads(cleaned)
+
+
+def _get_client() -> Groq:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "GROQ_API_KEY is not set. Add it to your environment or .env file."
+        )
+    return Groq(api_key=api_key)
 
 
 def generate_sql(question: str) -> dict:
@@ -29,7 +38,7 @@ def generate_sql(question: str) -> dict:
     """
     system = _load_prompt("system.txt").format(schema=SCHEMA_DESCRIPTION)
 
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model=model,
         max_tokens=1024,
         temperature=0.1,
@@ -61,7 +70,7 @@ def fix_sql(question: str, failed_sql: str, error_message: str) -> dict:
         schema=SCHEMA_DESCRIPTION,
     )
 
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model=model,
         max_tokens=1024,
         temperature=0.1,

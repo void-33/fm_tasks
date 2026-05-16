@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from logger import logger
-from router import router
+from routes.router import router
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 
