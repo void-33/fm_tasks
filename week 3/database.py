@@ -4,7 +4,11 @@ import psycopg2.extras
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
+import logging
+
 load_dotenv()
+
+logger = logging.getLogger("text2sql")
 
 DB_CONFIG = {
     "host":     os.getenv("DB_HOST", "localhost"),
@@ -16,7 +20,9 @@ DB_CONFIG = {
 
 
 def get_connection():
-    return psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**DB_CONFIG)
+    logger.info("DB session opened")
+    return conn
 
 
 @contextmanager
@@ -31,6 +37,7 @@ def get_cursor():
         raise
     finally:
         conn.close()
+        logger.info("DB session closed")
 
 
 def test_connection() -> bool:
