@@ -105,7 +105,6 @@ def generate_decomposition(question: str, schema_text: Optional[str] = None) -> 
     )
     raw = _call_llm(prompt, temperature=0.0, max_tokens=1024)
     data = _parse_json(raw)
-    norm_data = _normalize_decomposition(data)
     return _normalize_decomposition(data)
 
 

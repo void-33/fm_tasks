@@ -1,7 +1,10 @@
+groq
+python-dotenv
+psycopg2-binary
+streamlit
+pandas
 fastapi
 uvicorn
-psycopg2-binary
-python-dotenv
-pydantic
-groq
-openpyxl
+langgraph
+langchain-groq
+langchain-core
