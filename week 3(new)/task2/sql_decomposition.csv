@@ -1,0 +1,51 @@
+question,Intent,Tables involved,Columns needed,Filters/conditions,Joins (if any)
+List all products,Retrieve all product records,products,All (*),None,None
+Get all customers,Retrieve all customer records,customers,All (*),None,None
+Show all orders,Retrieve all order records,orders,All (*),None,None
+List all employees,Retrieve all employee records,employees,All (*),None,None
+Get all offices,Retrieve all office records,offices,All (*),None,None
+Show all product lines,Retrieve all product line records,productlines,All (*),None,None
+List all payments,Retrieve all payment records,payments,All (*),None,None
+Get product names and prices,Retrieve product names and prices,products,,None,None
+Get customer names and cities,Retrieve customer names and cities,customers,"customerName, city",None,None
+List employee first and last names,Retrieve employee first and last names,employees,"firstName, lastName",None,None
+Get all order dates,Retrieve all order dates,orders,orderDate,None,None
+Show product vendor list,Retrieve all product vendors,products,productVendor,None,None
+Get all product codes,Retrieve all product codes,products,productCode,None,None
+List all countries from offices,Retrieve all countries from offices,offices,country,None,None
+Show all order statuses,Retrieve all distinct order statuses,orders,status,None,None
+Get all payment amounts,Retrieve all payment amounts,payments,amount,None,None
+List all job titles,Retrieve all job titles of employees,employees,jobTitle,None,None
+Get customer phone numbers,Retrieve customer phone numbers,customers,"customerName, phone",None,None
+Show product MSRP values,Retrieve product MSRP values,products,"productName, MSRP",None,None
+List order numbers,Retrieve all order numbers,orders,orderNumber,None,None
+Get orders with customer names,Retrieve orders along with customer names,"orders, customers","orderNumber, orderDate, customerName",None,orders JOIN customers ON orders.customerNumber = customers.customerNumber
+Get employees with office city,Retrieve employees along with their office city,"employees, offices","firstName, lastName, city",None,employees JOIN offices ON employees.officeCode = offices.officeCode
+Get payments with customer names,Retrieve payments along with customer names,"payments, customers","customerName, amount, paymentDate",None,payments JOIN customers ON payments.customerNumber = customers.customerNumber
+Get order details with product names,Retrieve order details along with product names,"orderdetails, products","orderNumber, productName, quantityOrdered, priceEach",None,orderdetails JOIN products ON orderdetails.productCode = products.productCode
+Get products with product line description,Retrieve products along with their product line description,"products, productlines","productName, textDescription",None,products JOIN productlines ON products.productLine = productlines.productLine
+Get customers with sales rep names,Retrieve customers along with their sales rep names,"customers, employees","customerName, firstName, lastName",None,customers JOIN employees ON customers.salesRepEmployeeNumber = employees.employeeNumber
+Get orders with customer city,Retrieve orders along with customer city,"orders, customers","orderNumber, orderDate, city",None,orders JOIN customers ON orders.customerNumber = customers.customerNumber
+Get employees and their manager,Retrieve employees along with their manager's name,"employees e, employees m","e.firstName, e.lastName, m.firstName AS managerFirst, m.lastName AS managerLast",None,employees e LEFT JOIN employees m ON e.reportsTo = m.employeeNumber
+Get orderdetails with product vendor,Retrieve order details along with product vendor,"orderdetails, products","orderNumber, productVendor, quantityOrdered",None,orderdetails JOIN products ON orderdetails.productCode = products.productCode
+Get payments with customer country,Retrieve payments along with customer country,"payments, customers","customerName, country, amount",None,payments JOIN customers ON payments.customerNumber = customers.customerNumber
+Count customers per country,Count the number of customers per country,customers,"country, COUNT(customerNumber)",None,None
+Total payments per customer,Calculate total payments per customer,payments,"customerNumber, SUM(amount)",None,None
+Number of orders per status,Count the number of orders per status,orders,"status, COUNT(orderNumber)",None,None
+Products per product line,Count the number of products per product line,products,"productLine, COUNT(productCode)",None,None
+Employees per office,Count the number of employees per office,employees,"officeCode, COUNT(employeeNumber)",None,None
+Total stock per product vendor,Calculate total quantity in stock per product vendor,products,"productVendor, SUM(quantityInStock)",None,None
+Average buy price per product line,Calculate average buy price per product line,products,"productLine, AVG(buyPrice)",None,None
+Orders per customer,Count the number of orders per customer,orders,"customerNumber, COUNT(orderNumber)",None,None
+Max MSRP per product line,Find the maximum MSRP per product line,products,"productLine, MAX(MSRP)",None,None
+Min buy price per vendor,Find the minimum buy price per vendor,products,"productVendor, MIN(buyPrice)",None,None
+Total number of customers,Count the total number of customers,customers,COUNT(customerNumber),None,None
+Total number of products,Count the total number of products,products,COUNT(productCode),None,None
+Total revenue from payments,Calculate total revenue from all payments,payments,SUM(amount),None,None
+Average product price,Calculate the average product buy price,products,AVG(buyPrice),None,None
+Max payment amount,Find the maximum payment amount,payments,MAX(amount),None,None
+Min payment amount,Find the minimum payment amount,payments,MIN(amount),None,None
+Count total orders,Count the total number of orders,orders,COUNT(orderNumber),None,None
+Total quantity in stock,Calculate total quantity in stock across all products,products,SUM(quantityInStock),None,None
+Average MSRP,Calculate the average MSRP across all products,products,AVG(MSRP),None,None
+Number of employees,Count the total number of employees,employees,COUNT(employeeNumber),None,None
