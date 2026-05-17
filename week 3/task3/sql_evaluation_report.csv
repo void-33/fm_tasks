@@ -1,0 +1,248 @@
+question,generated sql,executed successfully,correct result,retry needed,final status
+List all products,"SELECT 
+  p.*
+FROM 
+  products p;",True,True,False,correct
+Get all customers,"SELECT 
+  c.*
+FROM 
+  customers c;",True,True,False,correct
+Show all orders,"SELECT 
+  o.*
+FROM 
+  orders o;",True,True,False,correct
+List all employees,"SELECT 
+  e.*
+FROM 
+  employees e;",True,True,False,correct
+Get all offices,"SELECT 
+  o.*
+FROM 
+  offices o;",True,True,False,correct
+Show all product lines,"SELECT 
+  pl.*
+FROM 
+  productlines pl;",True,True,False,correct
+List all payments,"SELECT 
+  p.*
+FROM 
+  payments p;",True,True,False,correct
+Get product names and prices,"SELECT 
+  p.""productName"", 
+  p.""buyPrice"", 
+  p.""MSRP""
+FROM 
+  products p;",True,True,False,correct
+Get customer names and cities,"SELECT 
+  c.""customerName"", 
+  c.""city""
+FROM 
+  customers c;",True,True,False,correct
+List employee first and last names,"SELECT 
+  e.""firstName"", 
+  e.""lastName""
+FROM 
+  employees e;",True,True,False,correct
+Get all order dates,"SELECT o.""orderDate""
+FROM orders o;",True,True,False,correct
+Show product vendor list,"SELECT DISTINCT p.""productVendor""
+FROM products p;",True,True,False,correct
+Get all product codes,"SELECT p.""productCode""
+FROM products p;",True,True,False,correct
+List all countries from offices,"SELECT o.""country""
+FROM offices o;",True,False,False,incorrect
+Show all order statuses,"SELECT o.""status""
+FROM orders o;",True,False,False,incorrect
+Get all payment amounts,"SELECT p.""amount""
+FROM payments p;",True,True,False,correct
+List all job titles,"SELECT DISTINCT e.""jobTitle""
+FROM employees e;",True,True,False,correct
+Get customer phone numbers,"SELECT c.""phone""
+FROM customers c;",True,True,False,correct
+Show product MSRP values,"SELECT 
+  p.""MSRP""
+FROM 
+  products p;",True,False,False,reference_failed
+List order numbers,"SELECT o.""orderNumber""
+FROM orders o;",True,True,False,correct
+Get orders with customer names,"SELECT 
+  o.*,
+  c.""customerName""
+FROM 
+  orders o
+INNER JOIN 
+  customers c ON o.""customerNumber"" = c.""customerNumber"";",True,False,False,reference_failed
+Get employees with office city,"SELECT 
+  e.""lastName"", 
+  e.""firstName"", 
+  o.""city""
+FROM 
+  employees e
+INNER JOIN 
+  offices o ON e.""officeCode"" = o.""officeCode"";",True,False,False,reference_failed
+Get payments with customer names,"SELECT 
+  p.""customerNumber"",
+  p.""checkNumber"",
+  p.""paymentDate"",
+  p.""amount"",
+  c.""customerName""
+FROM 
+  payments p
+INNER JOIN 
+  customers c ON p.""customerNumber"" = c.""customerNumber"";",True,False,False,reference_failed
+Get order details with product names,"SELECT 
+  od.""orderNumber"",
+  od.""productCode"",
+  od.""quantityOrdered"",
+  od.""priceEach"",
+  p.""productName""
+FROM 
+  orderdetails od
+INNER JOIN 
+  products p ON od.""productCode"" = p.""productCode"";",True,False,False,reference_failed
+Get products with product line description,"SELECT 
+  p.""productCode"",
+  p.""productName"",
+  pl.""textDescription""
+FROM 
+  products p
+INNER JOIN 
+  productlines pl ON p.""productLine"" = pl.""productLine"";",True,False,False,reference_failed
+Get customers with sales rep names,"SELECT 
+  c.""customerName"", 
+  e.""lastName"", 
+  e.""firstName""
+FROM 
+  customers c
+INNER JOIN 
+  employees e ON c.""salesRepEmployeeNumber"" = e.""employeeNumber"";",True,False,False,reference_failed
+Get orders with customer city,"SELECT 
+  o.*,
+  c.""city""
+FROM 
+  orders o
+INNER JOIN 
+  customers c ON o.""customerNumber"" = c.""customerNumber"";",True,False,False,reference_failed
+Get employees and their manager,"SELECT 
+  e1.""employeeNumber"",
+  e1.""lastName"",
+  e1.""firstName"",
+  e1.""reportsTo"",
+  e2.""lastName"" AS ""managerLastName"",
+  e2.""firstName"" AS ""managerFirstName""
+FROM 
+  employees e1
+  LEFT JOIN employees e2 ON e1.""reportsTo"" = e2.""employeeNumber"";",True,False,False,reference_failed
+Get orderdetails with product vendor,"SELECT 
+  od.""orderNumber"",
+  od.""productCode"",
+  od.""quantityOrdered"",
+  od.""priceEach"",
+  od.""orderLineNumber"",
+  p.""productVendor""
+FROM 
+  orderdetails od
+INNER JOIN 
+  products p ON od.""productCode"" = p.""productCode"";",True,False,False,reference_failed
+Get payments with customer country,"SELECT 
+  p.*,
+  c.""country""
+FROM 
+  payments p
+INNER JOIN 
+  customers c ON p.""customerNumber"" = c.""customerNumber"";",True,False,False,reference_failed
+Count customers per country,"SELECT 
+  c.""country"", 
+  COUNT(c.""customerNumber"")
+FROM 
+  customers c
+GROUP BY 
+  c.""country"";",True,True,False,correct
+Total payments per customer,"SELECT 
+  c.""customerName"", 
+  SUM(p.""amount"") 
+FROM 
+  customers c 
+  INNER JOIN payments p ON c.""customerNumber"" = p.""customerNumber"" 
+GROUP BY 
+  c.""customerName"";",True,False,False,reference_failed
+Number of orders per status,"SELECT 
+  o.""status"", 
+  COUNT(*) 
+FROM 
+  orders o 
+GROUP BY 
+  o.""status"";",True,True,False,correct
+Products per product line,"SELECT 
+  pl.""productLine"", 
+  p.""productName""
+FROM 
+  products p
+INNER JOIN 
+  productlines pl ON p.""productLine"" = pl.""productLine"";",True,False,False,reference_failed
+Employees per office,"SELECT 
+  o.""officeCode"",
+  o.""city"",
+  e.""firstName"",
+  e.""lastName""
+FROM 
+  employees e
+INNER JOIN 
+  offices o ON e.""officeCode"" = o.""officeCode"";",True,False,False,reference_failed
+Total stock per product vendor,"SELECT 
+  p.""productVendor"", 
+  SUM(p.""quantityInStock"") 
+FROM 
+  products p 
+GROUP BY 
+  p.""productVendor"";",True,False,False,reference_failed
+Average buy price per product line,"SELECT 
+  p.""productLine"", 
+  AVG(p.""buyPrice"") AS ""averageBuyPrice""
+FROM 
+  products p
+GROUP BY 
+  p.""productLine"";",True,False,False,reference_failed
+Orders per customer,"SELECT 
+  c.""customerName"", 
+  COUNT(o.""orderNumber"")
+FROM 
+  customers c
+INNER JOIN 
+  orders o ON c.""customerNumber"" = o.""customerNumber""
+GROUP BY 
+  c.""customerName""",True,False,False,reference_failed
+Max MSRP per product line,"SELECT 
+  p.""productLine"", 
+  MAX(p.""MSRP"") AS ""max_msrp""
+FROM 
+  products p
+GROUP BY 
+  p.""productLine""",True,False,False,reference_failed
+Min buy price per vendor,"SELECT 
+  p.""productVendor"", 
+  MIN(p.""buyPrice"") AS ""min_buy_price""
+FROM 
+  products p
+GROUP BY 
+  p.""productVendor""",True,False,False,reference_failed
+Total number of customers,"SELECT COUNT(*) 
+FROM customers c;",True,True,False,correct
+Total number of products,"SELECT COUNT(p.""productCode"") 
+FROM products p;",True,True,False,correct
+Total revenue from payments,"SELECT SUM(p.""amount"") 
+FROM payments p;",True,True,False,correct
+Average product price,"SELECT AVG(p.""buyPrice"") 
+FROM products p;",True,False,False,reference_failed
+Max payment amount,"SELECT MAX(p.""amount"") 
+FROM payments p;",True,True,False,correct
+Min payment amount,"SELECT MIN(p.""amount"") 
+FROM payments p;",True,True,False,correct
+Count total orders,"SELECT COUNT(o.""orderNumber"") 
+FROM orders o;",True,True,False,correct
+Total quantity in stock,"SELECT SUM(p.""quantityInStock"") 
+FROM products p;",True,False,False,reference_failed
+Average MSRP,"SELECT AVG(p.""MSRP"") 
+FROM products p;",True,True,False,correct
+Number of employees,"SELECT COUNT(*) 
+FROM employees e;",True,True,False,correct
