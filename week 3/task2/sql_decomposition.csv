@@ -6,7 +6,7 @@ List all employees,Retrieve all employee records,employees,All (*),None,None
 Get all offices,Retrieve all office records,offices,All (*),None,None
 Show all product lines,Retrieve all product line records,productlines,All (*),None,None
 List all payments,Retrieve all payment records,payments,All (*),None,None
-Get product names and prices,Retrieve product names and prices,products,,None,None
+Get product names and prices,Retrieve product names and prices,products,"productName, buyPrice",None,None
 Get customer names and cities,Retrieve customer names and cities,customers,"customerName, city",None,None
 List employee first and last names,Retrieve employee first and last names,employees,"firstName, lastName",None,None
 Get all order dates,Retrieve all order dates,orders,orderDate,None,None
