@@ -1,15 +1,13 @@
 # Reflection: Bayesian vs. MLE Decision Making
 
-### The Scenario: Small-Sample Customer Segmentation
-In Part 1 of the assignment notebook, we analyzed a small subset of Month-to-month customers (**Group A_small**, n=40). The observed churn count was 15, leading to a **Maximum Likelihood Estimate (MLE) of 37.5%**.
+## One Concrete Example Where the Fully Bayesian Answer Changed a Decision I Would Have Made Using Only the MLE
 
-### The Mechanism: Prior Pull and Uncertainty Quantification
-If we relied solely on the MLE, a business decision-maker might conclude that this specific micro-segment is performing significantly better than the overall Month-to-month average (~42.7%). However, the Bayesian **MAP estimate** (using a Beta(2,8) prior) pulled this value down to **33.3%**, while the **94% HDI** revealed a wide credible interval spanning roughly **22% to 45%**.
+In Part 2 (Q6), I analyzed whether the overall churn rate exceeded 0.25 — a business threshold the VP uses to trigger a retention campaign.
 
-### The Decision Change
-**Decision with MLE only:** We might aggressively target this segment with "retention success" case studies, assuming their 37.5% churn rate is a stable, localized phenomenon.
+The MLE approach relies on a frequentist one-proportion z-test, which the notebook computes requires **n = 6,304 observations** before the result reaches statistical significance. For the first 6,303 customers, a frequentist analyst has no formal basis for action.
 
-**Decision with Bayesian Inference:** We would instead choose to **defer action** or gather more data. The mechanism for this change is the **explicit quantification of epistemic uncertainty**. By seeing the HDI, we recognize that the 37.5% figure is statistically "noisy" and that the true churn rate could easily be higher than the group average. The prior acts as a "skeptical friend," dragging the estimate toward known historical norms (20% prior mean) and preventing us from over-reacting to a small-sample fluke.
+The sequential Bayesian update told a dramatically different story. Starting from a `Beta(2, 8)` prior encoding the historical belief that churn is typically below 30%, I updated the posterior one customer at a time using `update_posterior()`. I then computed P(θ > 0.25) at each step via Monte Carlo sampling from the current posterior. The posterior probability crossed the 90% decision threshold at **n = 17** — after only 17 observations, and **6,287 observations earlier** than the frequentist approach required.
 
-### Summary
-The fully Bayesian answer changed the decision from **active intervention** to **cautious observation** by revealing that our "insight" was actually just sampling noise.
+The mechanism behind this difference is **sequential evidence incorporation with explicit uncertainty quantification**. Rather than waiting until a fixed sample size is reached, the Bayesian framework allows the decision threshold to be crossed as soon as the posterior probability — a direct, interpretable statement of belief — reaches 90%. There is no need for a p-value or a pre-committed sample size. The prior acts as a calibrated starting point that the data progressively overrides, compressing the evidence requirement by orders of magnitude.
+
+The decision this changed: under MLE, I would have told the VP *"we don't have enough data yet"* for the first 6,303 customers. Under the Bayesian framework, I could have recommended triggering the retention campaign after just 17 observations, acting on real evidence rather than waiting for a sample size that may never be reached in a new customer segment — precisely the situation the VP described with the 40-customer contract tier.
