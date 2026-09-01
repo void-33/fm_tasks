@@ -42,15 +42,16 @@ graph TD
 
 ## Step-by-Step: Running the Project
 
-1. **Navigate to the project directory:**
-   ```bash
-   cd task_2
-   ```
-
-2. **Set up environment variables:**
+1. **Set up environment variables:**
+   From the project root, copy the shared template and add your GEMINI_API_KEY:
    ```bash
    cp .env.template .env
    # Open .env and add your GEMINI_API_KEY
+   ```
+
+2. **Navigate to the project directory:**
+   ```bash
+   cd task_2
    ```
 
 3. **Build and start all services:**
@@ -78,7 +79,11 @@ Send the same message twice. The second response will have `"cache_hit": true` i
 Send more than 60 requests per minute from the same IP. The API will return `HTTP 429 Too Many Requests`. The UI shows a friendly message.
 
 ### Fallback
-To test fallback, temporarily set an invalid `GEMINI_API_KEY` in `.env` and restart the backend. The API will retry 3 times, then gracefully fall back to Ollama and return a response with `"fallback_used": true` and a `⚠ fallback` badge in the UI.
+To test fallback, temporarily set an invalid `GEMINI_API_KEY` in the root `.env` and restart the backend. The API will retry 3 times, then gracefully fall back to Ollama and return a response with `"fallback_used": true` and a `⚠ fallback` badge in the UI.
+
+## Shared Environment File
+
+Task 2 uses the same root-level `.env` file as Task 1, so shared credentials only need to be updated once.
 
 ### Health Check
 ```bash

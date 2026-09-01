@@ -1,5 +1,15 @@
-from pydantic_settings import BaseSettings
+from pathlib import Path
 from typing import Optional
+
+from pydantic_settings import BaseSettings
+
+
+def _find_shared_env_file() -> str:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / ".env"
+        if candidate.is_file():
+            return str(candidate)
+    return ".env"
 
 
 class Settings(BaseSettings):
@@ -18,7 +28,7 @@ class Settings(BaseSettings):
     hf_token: Optional[str] = None
 
     class Config:
-        env_file = ".env"
+        env_file = _find_shared_env_file()
         extra = "ignore"
 
 

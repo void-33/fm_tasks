@@ -12,8 +12,9 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    env_file:
+      - ../.env
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - REDIS_URL=redis://redis:6379
       - OLLAMA_API_BASE=http://ollama:11434/v1
     volumes:
