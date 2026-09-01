@@ -1,6 +1,8 @@
-from pydantic_settings import BaseSettings
-
+from pathlib import Path
 from typing import Optional
+
+from dotenv import find_dotenv
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     gemini_api_key: str = ""
@@ -9,7 +11,7 @@ class Settings(BaseSettings):
     hf_token: Optional[str] = None
     
     class Config:
-        env_file = ".env"
+        env_file = find_dotenv(usecwd=True) or str(Path(__file__).resolve().parents[3] / ".env")
         extra = "ignore"
 
 settings = Settings()

@@ -32,17 +32,17 @@ graph TD
 
 ## Step-by-Step Guide to Run the Project
 
-1. **Navigate to the Project Directory**:
-   Open your terminal and navigate to the root of the project:
-   ```bash
-   cd task_1
-   ```
-
-2. **Configure Environment Variables**:
-   Copy the provided `.env.template` to `.env` and add your Google Gemini API key:
+1. **Set up Environment Variables**:
+   From the project root, copy the shared template and add your Google Gemini API key:
    ```bash
    cp .env.template .env
    # Open .env and add your API key
+   ```
+
+2. **Navigate to the Project Directory**:
+   Open your terminal and navigate to the root of the project:
+   ```bash
+   cd task_1
    ```
 
 3. **Build and Start the Containers**:
@@ -62,6 +62,10 @@ graph TD
    ```bash
    docker compose down
    ```
+
+## Shared Environment File
+
+Both Task 1 and Task 2 read the same root-level `.env` file for shared credentials, so you only need to maintain the API key in one place.
 
 ## Usecases
 

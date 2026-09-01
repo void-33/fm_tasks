@@ -1,8 +1,8 @@
 import os
 from google import genai
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
-load_dotenv('.env')
+load_dotenv(find_dotenv(usecwd=True))
 
 client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 try:
