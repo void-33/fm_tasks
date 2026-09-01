@@ -1,0 +1,53 @@
+services:
+  # ── React Frontend (Nginx) ───────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - OLLAMA_API_BASE=http://ollama:11434/v1
+    volumes:
+      - ./backend:/app:z
+      - ./chroma_db:/app/chroma_db:z
+    depends_on:
+      - redis
+      - ollama
+
+  # ── Redis Cache ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data:z
+    command: redis-server --appendonly yes  # persistence enabled
+
+  # ── Ollama (Fallback Local LLM) ──────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama:z
+
+  # ── Sidecar: Pull the small model on startup ─────────────────────────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    command: pull qwen2.5:0.5b
+    depends_on:
+      - ollama
+
+volumes:
+  redis_data:

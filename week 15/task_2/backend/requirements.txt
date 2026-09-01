@@ -1,0 +1,12 @@
+fastapi>=0.110.1
+uvicorn[standard]>=0.29.0
+google-genai>=0.2.2
+openai>=1.14.3
+tenacity>=8.2.3
+slowapi>=0.1.9
+redis[asyncio]>=5.0.1
+pydantic>=2.6.4
+pydantic-settings>=2.2.1
+python-multipart>=0.0.9
+PyPDF2>=3.0.1
+chromadb>=0.4.24

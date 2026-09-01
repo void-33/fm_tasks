@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            color: var(--text);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 1200px;
+            height: 85vh;
+            gap: 24px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar {
+            width: 300px;
+            flex-shrink: 0;
+        }
+
+        .main-chat {
+            flex-grow: 1;
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+            font-weight: 600;
+        }
+        
+        h1 { font-size: 24px; margin-bottom: 24px; }
+        h2 { font-size: 16px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        select, input[type="file"], button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+        }
+        
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .toggle-group label {
+            margin: 0;
+            color: var(--text);
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-area input[type="text"] {
+            flex-grow: 1;
+            margin: 0;
+        }
+
+        .input-area button {
+            width: auto;
+            margin: 0;
+            padding: 0 24px;
+        }
+
+        .status-msg {
+            font-size: 12px;
+            color: #10b981;
+            margin-top: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .error-msg {
+            color: #ef4444;
+        }
+
+        pre {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Sidebar / Settings -->
+    <div class="panel sidebar">
+        <h1>AI Assistant</h1>
+        
+        <h2>Settings</h2>
+        <div class="control-group">
+            <label>Model Engine</label>
+            <select id="modelSelect">
+                <option value="gemini">Gemini API (Cloud)</option>
+                <option value="ollama">Ollama (Local CPU)</option>
+            </select>
+        </div>
+
+        <div class="toggle-group">
+            <label for="useRag">Enable RAG</label>
+            <input type="checkbox" id="useRag" checked>
+        </div>
+        
+        <div class="toggle-group">
+            <label for="useStructured">Structured JSON</label>
+            <input type="checkbox" id="useStructured">
+        </div>
+
+        <h2 style="margin-top: 32px;">Knowledge Base</h2>
+        <div class="control-group">
+            <label>Upload Document (PDF/TXT)</label>
+            <input type="file" id="fileInput" accept=".txt,.pdf">
+            <button id="uploadBtn" onclick="uploadFile()">Ingest File</button>
+            <div id="uploadStatus" class="status-msg">File ingested successfully!</div>
+        </div>
+    </div>
+
+    <!-- Main Chat -->
+    <div class="panel main-chat">
+        <h2>Conversation</h2>
+        <div class="chat-box" id="chatBox">
+            <div class="message ai">Hello! I am your AI assistant. How can I help you today?</div>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById('chatBox');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    
+    function addMessage(text, sender) {
+        const div = document.createElement('div');
+        div.className = `message ${sender}`;
+        
+        if (typeof text === 'object') {
+            div.innerHTML = `<pre>${JSON.stringify(text, null, 2)}</pre>`;
+        } else {
+            // Replace newlines with <br> for simple markdown handling
+            div.innerHTML = text.replace(/\n/g, '<br>');
+        }
+        
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    async function sendMessage() {
+        const msg = chatInput.value.trim();
+        if (!msg) return;
+
+        addMessage(msg, 'user');
+        chatInput.value = '';
+        chatInput.disabled = true;
+        sendBtn.disabled = true;
+        
+        const modelType = document.getElementById('modelSelect').value;
+        const useRag = document.getElementById('useRag').checked;
+        const structuredOutput = document.getElementById('useStructured').checked;
+
+        try {
+            const response = await fetch('/api/v1/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: msg,
+                    model_type: modelType,
+                    temperature: 0.7,
+                    use_rag: useRag,
+                    structured_output: structuredOutput
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to fetch response');
+            }
+
+            if (structuredOutput && data.structured_data) {
+                addMessage(data.structured_data, 'ai');
+            } else {
+                let aiResponse = data.reply;
+                if (data.sources && data.sources.length > 0) {
+                    aiResponse += `\n\n<small style="color:#94a3b8;">Sources: ${data.sources.join(', ')}</small>`;
+                }
+                addMessage(aiResponse, 'ai');
+            }
+        } catch (error) {
+            addMessage(`Error: ${error.message}`, 'ai');
+        } finally {
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    async function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const status = document.getElementById('uploadStatus');
+        
+        if (!fileInput.files[0]) return;
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Ingesting...';
+        status.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/api/v1/ingest/file', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                status.textContent = 'File ingested successfully!';
+                status.className = 'status-msg';
+            } else {
+                throw new Error('Upload failed');
+            }
+        } catch (error) {
+            status.textContent = error.message;
+            status.className = 'status-msg error-msg';
+        } finally {
+            status.style.display = 'block';
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Ingest File';
+            fileInput.value = '';
+        }
+    }
+</script>
+
+</body>
+</html>

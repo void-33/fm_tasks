@@ -1,13 +1,14 @@
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*.pyo
+**/*.py[cod]
+**/*.pyo
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
 
 # Virtual environments
-/.venv
-/.env
-**/.venv
+**/.venv/
 **/.env
 
 # PDF files to ignore in any subfolder
@@ -19,8 +20,20 @@ __pycache__/
 
 
 # Common temporary and OS files
-*.log
-*.tmp
-*~
-.DS_Store
-Thumbs.db
+**/*.log
+**/*.tmp
+**/*~
+**/.DS_Store
+**/Thumbs.db
+
+
+**/ollama_data/
+**/chroma_db/
+
+**/node_modules/
+**/dist/
+**/vite/
+
+**/.idea/
+**/.vscode/
+**/*.swp
