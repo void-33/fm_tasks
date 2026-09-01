@@ -63,12 +63,19 @@ async def ingest_text(text: str, source_name: str = "upload") -> int:
     return len(chunks)
 
 
-async def retrieve_context(query: str, top_k: int = 3) -> tuple[str, list]:
+async def retrieve_context(query: str, top_k: int = 3, selected_sources: list[str] | None = None) -> tuple[str, list]:
     collection = get_chroma()
     if collection.count() == 0:
         return "", []
+    if selected_sources is not None and len(selected_sources) == 0:
+        return "", []
+
     query_embedding = await embed(query)
-    results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
+    query_kwargs = {"query_embeddings": [query_embedding], "n_results": top_k}
+    if selected_sources:
+        query_kwargs["where"] = {"source": {"$in": selected_sources}}
+
+    results = collection.query(**query_kwargs)
     context = ""
     sources = []
     if results and results["documents"] and results["documents"][0]:

@@ -171,6 +171,64 @@ body {
 .status-ok  { font-size: 13px; color: var(--green); }
 .status-err { font-size: 13px; color: var(--red);   }
 
+.document-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.document-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-toggle {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.5);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  padding: 0;
+}
+
+.doc-toggle-on {
+  background: var(--primary);
+}
+
+.doc-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s ease;
+}
+
+.doc-toggle-on .doc-toggle-thumb {
+  transform: translateX(16px);
+}
+
 /* ── Chat Area ── */
 .chat-area {
   flex: 1;

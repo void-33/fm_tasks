@@ -26,6 +26,7 @@ class ChatRequest(BaseModel):
     model_type: str = Field(default="gemini", description="'gemini' or 'ollama'")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     use_rag: bool = Field(default=True)
+    selected_sources: Optional[list[str]] = Field(default=None, description="Enabled uploaded document sources for RAG")
 
 
 class ChatResponse(BaseModel):
@@ -70,7 +71,12 @@ async def chat(request: Request, body: ChatRequest):
     # ── 2. Retrieve RAG context ────────────────────────────────────────────
     context = ""
     sources = []
-    if body.use_rag:
+    if body.use_rag and body.selected_sources is not None:
+        try:
+            context, sources = await rag.retrieve_context(body.message, selected_sources=body.selected_sources)
+        except Exception as e:
+            logger.warning(f"RAG retrieval failed: {e}")
+    elif body.use_rag:
         try:
             context, sources = await rag.retrieve_context(body.message)
         except Exception as e:

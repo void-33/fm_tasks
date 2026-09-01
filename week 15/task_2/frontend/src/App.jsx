@@ -66,6 +66,7 @@ export default function App() {
   const [health, setHealth] = useState({ redis: '…', ollama: '…' })
   const [uploadStatus, setUploadStatus] = useState(null)
   const [temperature, setTemperature] = useState(0.7)
+  const [uploadedDocs, setUploadedDocs] = useState([])
 
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
@@ -101,10 +102,17 @@ export default function App() {
     setMessages(prev => [...prev, { role: 'user', content: text, time: formatTime() }])
     setLoading(true)
     try {
+      const selectedSources = uploadedDocs.filter(doc => doc.enabled).map(doc => doc.name)
       const res = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, model_type: modelType, temperature, use_rag: useRag })
+        body: JSON.stringify({
+          message: text,
+          model_type: modelType,
+          temperature,
+          use_rag: useRag,
+          selected_sources: selectedSources
+        })
       })
       if (res.status === 429) {
         setMessages(prev => [...prev, { role: 'ai', content: '⛔ Rate limit exceeded. Please wait a moment before sending more messages.', time: formatTime(), model: '', cache_hit: false, fallback: false }])
@@ -145,6 +153,11 @@ export default function App() {
       const res = await fetch(`${API_BASE}/ingest/file`, { method: 'POST', body: form })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail)
+      setUploadedDocs(prev => {
+        const exists = prev.some(doc => doc.name === file.name)
+        if (exists) return prev
+        return [...prev, { name: file.name, enabled: true }]
+      })
       setUploadStatus('success')
     } catch (e) {
       setUploadStatus('error')
@@ -152,6 +165,12 @@ export default function App() {
       if (fileRef.current) fileRef.current.value = ''
       setTimeout(() => setUploadStatus(null), 3000)
     }
+  }
+
+  const toggleDocument = (name) => {
+    setUploadedDocs(prev => prev.map(doc =>
+      doc.name === name ? { ...doc, enabled: !doc.enabled } : doc
+    ))
   }
 
   return (
@@ -192,6 +211,24 @@ export default function App() {
         </button>
         {uploadStatus === 'success' && <p className="status-ok">✓ Ingested successfully</p>}
         {uploadStatus === 'error' && <p className="status-err">✗ Ingestion failed</p>}
+
+        {uploadedDocs.length > 0 && (
+          <div className="document-list">
+            {uploadedDocs.map(doc => (
+              <div key={doc.name} className="document-item">
+                <span className="document-name">{doc.name}</span>
+                <button
+                  type="button"
+                  className={`doc-toggle ${doc.enabled ? 'doc-toggle-on' : ''}`}
+                  onClick={() => toggleDocument(doc.name)}
+                  aria-label={`Toggle ${doc.name}`}
+                >
+                  <span className="doc-toggle-thumb" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </aside>
 
       {/* ── Main Chat ── */}
