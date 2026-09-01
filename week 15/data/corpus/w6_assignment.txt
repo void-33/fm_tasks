@@ -1,0 +1,158 @@
+Week 6 Project Guide
+Probabilistic Models & Bayesian Inference
+Role Requirements · Notebook Walkthrough · Submission Guide
+Statistical Machine Learning · Fusemachines AI Fellowship · Susan Ghimire
+How to use this document: Read the Your Role section first — it sets the business context for every decision you will
+make in the notebook. Then work through the Notebook Walkthrough section by section. Before you submit, run
+through the Completion Checklist and the Submission Requirements to make sure nothing is missing. All links in
+this document are clickable.
+1 YOUR ROLE
+The business scenario you are operating in for this entire assignment
+You are the Data Scientist who deployed last week's XGBoost churn model. Three weeks in, the VP of
+Retention flags two concerns: (1) “When you say a customer has a 73% churn probability — what is the margin of
+error on that number?” and (2) “We just launched a new contract tier with only 40 customers enrolled. Your model
+has never seen this segment — how far should I trust its output?”
+Responsibility
+Replace point estimates
+Quantify sequential
+evidence
+Model feature
+dependencies
+Forecast with honest
+uncertainty
+Validate a Bayesian
+posterior
+What it means in practice
+Parts 1–2: compute MLE, MAP, and full posteriors for churn rate by contract type. Report
+94% HDI — not a single number.
+Part 2: implement update_posterior() and show the VP exactly how many customers are
+needed before the inference is reliable.
+Parts 3–4: fit a Multivariate Gaussian, a Bayesian Network, and a Markov Random Field
+(MRF) to the same Telco features, and explain what each tells you that a single coefficient
+cannot.
+Part 5: fit a GP to Mauna Loa CO and define the model confidence boundary — the
+2horizon at which the 95% credible band exceeds 5 ppm.
+Part 6: build a Bayesian Logistic Regression using PyMC/NUTS, diagnose convergence
+via R-hat and ESS, compare the posterior to the frequentist MLE, and save the fitted trace
+as a .pkl artefact.
+Key challenge: These are not just modelling exercises. Each part answers one of the VP's two questions directly: (1)
+uncertainty quantification on point estimates, and (2) reliability of inference on small segments. A model that gives you
+a number without a distribution is giving you an incomplete answer — this week you replace every such number with a
+posterior.
+2 DATASETS
+Two datasets, six parts — no new EDA required for Telco
+Dataset
+Telco Customer
+Churn
+Mauna Loa CO2
+(monthly mean)
+Source
+Kaggle
+statsmodels
+built-in
+Used in
+Parts 1, 2,
+3, 4, 6
+Part 5 only
+Notes
+7,043 rows · 21 cols · same CSV from Week 5. No new EDA
+— focus is on probabilistic methods.
+521 months (1958–2001) · zero download · 3 lines to load. No
+CSV, no Kaggle.
+Mauna Loa data loading (3 lines — no CSV):
+from statsmodels.datasets import co2
+df = co2.load_pandas().data.resample('ME').mean().dropna()
+t = (df.index - df.index[0]).days.values.reshape(-1, 1) / 365.25
+y = df['co2'].values
+Design rationale: Telco carries the business narrative across five of six parts — students already know the data, so
+cognitive load stays on the probabilistic concepts. Mauna Loa is used only for the GP section because it has the exact
+structure GPs are designed for: a continuous temporal signal with trend, seasonality, and measurement noise that
+requires composite kernel engineering and produces visually dramatic uncertainty bands on extrapolation.
+3 HOW TO USE THE NOTEBOOK
+Step-by-step guide for opening, running, and completing the assignment
+• Open the notebook shared with you in Google Classroom and load it in Google Colab.
+• Run the setup cell first to install all required packages (pymc, arviz, pgmpy, scikit-learn, statsmodels,
+scipy). This takes ~3 minutes on a fresh runtime.
+• Work through Parts 1–6 in order — each part's outputs feed into later parts.
+• When done, submit the completed notebook (.ipynb), the saved PyMC trace (telco_bayes_lr_v1.pkl), and
+your one-page reflection back through Google Classroom.
+4 SUBMISSION REQUIREMENTS
+Exactly what to submit, how, and what will be checked
+4.1 Files to Submit
+File
+W6_Probabilistic_Models_
+Assignment.ipynb
+telco_bayes_lr_v1.pkl
+Reflection PDF or .md (≤ 1
+page)
+Description
+ Required?
+Your completed assignment notebook. Must be fully executed —
+all cells run top-to-bottom with all outputs, posterior plots,
+credible-band plots, and trace plots visible. All SELF-CHECK cells
+pass. All ✍ Reflect cells filled in.
+✓
+Required
+The fitted PyMC InferenceData trace saved using pickle.dump().
+Must load without errors using pickle.load() and contain all
+sampled chains. This mirrors Week 5's joblib serialisation habit —
+probabilistic models have artefacts too.
+✓
+Required
+Answer in your own words: 'Give one concrete example from this
+assignment where the fully Bayesian answer would have changed
+a decision you might have made using only the MLE or a p-value.
+Explain the mechanism — was it prior information, uncertainty
+quantification, sequential updating, or the Bayesian-vs-frequentist
+comparison?'
+✓
+Required
+4.2 Notebook Quality Standards
+• All cells are executed in order from top to bottom — no skipped cells, no cells with errors in the output.
+• Every # YOUR CODE HERE has been replaced with working code.
+• Every ✍ Reflect markdown cell contains your own reasoning — not a copy-paste from the session notebook or
+an AI-generated answer.
+• All SELF-CHECK assert cells pass without errors.
+• Trace plots (az.plot_trace) are visible for Part 6 — not empty axes.
+• The Part 6 prior-sensitivity overlay (Q20) and the Bayesian 94% HDI vs. frequentist (sklearn) MLE comparison
+(Q21) are visible, with specific numeric values stated.
+• Posterior HDI intervals are reported with specific numeric values — no placeholder text.
+• Code is clean and readable — no commented-out dead code blocks left behind.
+Do not submit: The raw CSV data file (too large), the session solution notebook, any .pyc files or __pycache__
+directories, or files generated by Jupyter checkpoints (.ipynb_checkpoints/). The .pkl trace file is the only binary artefact
+— do not submit joblib files from Week 5 again.
+5 COMMON MISTAKES TO AVOID
+Patterns that cause lost marks or incorrect results
+✗ Not scaling features before NUTS sampling (Part 6)
+PyMC's NUTS sampler assumes the posterior geometry is roughly spherical. Unscaled continuous features (tenure
+in months, MonthlyCharges in dollars) create elongated, highly anisotropic geometries that the sampler traverses
+very slowly — resulting in high autocorrelation, low ESS, and divergent transitions. Always scale to zero mean / unit
+variance using training-set statistics only before passing features to the model.
+✗ Choosing uninformative flat priors for logistic regression (Part 6)
+pm.Flat() on logistic regression coefficients creates an improper posterior — NUTS will diverge or produce
+nonsensical samples. Use weakly informative priors: Normal(0, 2) for β coefficients and Normal(0, 5) for the
+intercept. These encode 'most coefficients are between −4 and +4 on the log-odds scale' while remaining dominated
+by the data at n≈5,000.
+✗ Ignoring R-hat > 1.01 or bulk-ESS < 400 (Part 6)
+Reporting results from a non-converged chain is equivalent to reporting a model trained on corrupted data. If any
+parameter has R-hat > 1.01, do not proceed to posterior analysis. Investigate the trace plot, check for divergences,
+consider increasing target_accept or re-scaling features. ESS < 400 means your HDI estimate has high uncertainty
+itself.
+✗ Reporting MLE or MAP as 'the Bayesian answer' (Parts 1–2)
+MLE and MAP are both point estimates. The fully Bayesian answer is the entire posterior distribution — plot it, report
+the HDI, and use Monte Carlo to answer P(θ_A > θ_B). Reflecting only on the MAP estimate for Q1 will lose marks:
+the point of the exercise is the overlap (or non-overlap) of the full posteriors.
+✗ Using the wrong marginalisation formula (Part 3)
+To marginalise out TotalCharges from the 3D covariance matrix, you simply extract the 2×2 upper-left submatrix of
+Σ_{3D}. Do not re-fit a new 2D Gaussian — analytically marginalising means taking the corresponding block of the
+covariance. Verify that the result matches the directly fitted 2D Σ as a numerical check.
+✗ Writing generic Reflect answers
+Answers like 'the posterior gave more information' or 'the GP had uncertainty bands' earn no marks. Reflect answers
+must be specific: quote the numeric HDI, name the feature, cite the R-hat value, identify the exact n at which the
+decision threshold was crossed. E.g. 'At n=87 the posterior P(θ>0.25) first exceeded 0.90 — 43 observations earlier
+than the frequentist z-test sample size of 130 would have required.'
+Remember: The combination of correct code + written reasoning is what separates a model that informs decisions
+from one that sits in a notebook. A perfect MCMC trace with empty Reflect cells will not pass. A thoughtful reflection
+connecting the HDI to the VP's actual question — even with a minor code bug — is much better.
+Week 6 · Probabilistic Models & Bayesian Inference · Fusemachines AI Fellowship | Facilitator: Susan Ghimire | Datasets: Telco
+Customer Churn · Mauna Loa CO2

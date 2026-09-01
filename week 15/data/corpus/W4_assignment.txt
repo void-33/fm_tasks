@@ -1,0 +1,240 @@
+AIF 2026 · Phase 2 · Week 4
+Statistical Machine Learning: Linear Models
+Weekly Assignment
+Field
+Programme
+Phase
+Week
+Topic
+Dataset
+Submission
+Detail
+AI Fellowship 2026
+Phase 2 Foundational Statistical Learning
+Week 4
+Statistical Machine Learning: Linear Models
+Telco Customer Churn (Kaggle)
+Single Jupyter Notebook (.ipynb), fully executed
+Context
+You are a Data Scientist at a telecom company. The business is losing customers to churn and
+wants to take action. You have been handed historical customer data and one week to deliver a
+production-ready recommendation.
+That means understanding the problem deeply, running experiments across multiple models,
+evaluating your results honestly, and making a justified decision about what to ship. There is no
+prescribed model. You decide and you must defend every decision with evidence from your
+experiments.
+This is not a tutorial. There are no step-by-step instructions. You are expected to make decisions,
+justify them, and take ownership of your results. Bring your questions, your failures, and your findings
+to the session.
+Dataset
+Source: Telco Customer Churn
+https://www.kaggle.com/datasets/blastchar/telco-customer-churn
+Size: 7,043 rows · 21 columns · Single CSV file
+Features
+Category
+Demographics
+Columns
+gender, SeniorCitizen, Partner, Dependents
+Services
+Account Info
+Target
+PhoneService, MultipleLines, InternetService, OnlineSecurity,
+OnlineBackup, DeviceProtection, TechSupport, StreamingTV,
+StreamingMovies
+Contract, PaperlessBilling, PaymentMethod, MonthlyCharges,
+TotalCharges, tenure
+Churn (Yes / No)
+Known Issues
+These are not pre-cleaned for you. Handling them is part of the assignment.
+•
+•
+•
+TotalCharges contains whitespace strings (' ') where values are missing. You need to
+detect this, decide how to handle it, and justify your decision.
+The dataset is imbalanced: approximately 27% of customers churned. This affects model
+training, metric choice, and threshold decisions.
+Features are a mix of numeric and categorical types. Encoding decisions are yours to
+make.
+Tasks
+The assignment is structured into five tasks. Each task builds on the previous one. Do not skip
+ahead.
+Task 1 Understand the Problem First
+Before writing any modelling code, you must understand what you are actually solving. This task
+is about formulating the problem and understanding the data.
+1.2.3.4.5.Formulate the ML problem formally. What is X (your feature space)? What is y (your
+target variable)? What probability distribution naturally models the target, and what does
+that tell you about the right loss function?
+What assumptions are you making about the data-generating process? List at least
+three. For each assumption, describe what would happen to your model if that
+assumption were violated.
+Identify sources of uncertainty in this dataset. Where is the data noisy, biased, or
+incomplete? Be specific, name the columns and describe the issue.
+Profile the distributions of MonthlyCharges, tenure, and TotalCharges. What shape does
+each distribution follow? Are there impossible or suspicious values? Decide how to
+handle them and justify every decision.
+The dataset has approximately 27% churn. Build a naive baseline: a model that always
+predicts the majority class. What accuracy does it achieve? Why is this accuracy
+misleading and why is this model dangerous to rely on?
+Task 2 Classification Experiment Who Will Churn?
+This is an open experiment. Your goal is to find the best linear classifier for predicting churn. You
+are not told which model to use. You decide, you experiment, and you justify your choice.
+Candidates to explore: Logistic Regression, Ridge Classifier, SGD Classifier. You are not required to
+use all of them but you must justify what you tried and why you chose what you chose.
+1.2.3.For each model you try: train it, evaluate it on the validation set, and record your results
+in a comparison table.
+Evaluate using metrics appropriate for an imbalanced dataset. Think carefully before
+reporting accuracy. Which metrics actually tell you whether the model is useful to the
+business? Your comparison table must include: Accuracy, Precision, Recall, F1,
+ROC-AUC, PR-AUC, and Log Loss.
+Plot ROC and Precision-Recall curves for your best model. The retention team has a
+limited budget: they can only call 200 customers per week. At what threshold would you
+deploy your model given this constraint? Justify your answer.
+4.5.Inspect the coefficients of your chosen model. Which features drive churn the most? Do
+the signs and magnitudes make business sense? If any coefficient surprises you,
+investigate why.
+Compare Batch Gradient Descent (LogisticRegression) and Stochastic Gradient Descent
+(SGDClassifier). Do they converge to the same solution? Which is faster? When would
+you prefer one over the other?
+Task 3 Regression Experiment How Long Will They Stay? What Are They Worth?
+Binary churn prediction tells you who might leave. Regression tells you how long they will stay
+and how much they are worth. This task asks you to build regression models for at least one of
+the following targets.
+Choose at least one regression target:
+•
+ (a) Tenure as survival time how many months until a customer churns
+•
+ (b) Predicted churn probability score using the output of your classification model as a
+continuous target
+•
+ (c) Customer Lifetime Value (CLV) = MonthlyCharges × predicted tenure
+1.2.3.4.5.This is again an open experiment. Candidates to explore: Linear Regression, Ridge,
+Lasso, Elastic Net. Try at least two. Compare results in a table and justify your final
+choice.
+Evaluate using MAE, RMSE, and R². Do not just report the numbers and interpret each
+one. What does an R² of 0.55 actually mean in this context?
+Plot residuals against predicted values. Is there a pattern? What does that tell you about
+model fit or assumption violations?
+Apply Ridge, Lasso, and Elastic Net regularization. Compare coefficients across different
+regularization strengths. Plot the Lasso regularization path. Which features survive at
+high regularization? Explain geometrically why L1 produces sparse solutions and L2
+does not.
+What does CLV enable the business to do that binary churn prediction alone cannot?
+Task 4 Evaluation Integrity
+A model with inflated metrics is worse than a model with honest ones. This task is about
+verifying that your evaluation is trustworthy.
+1.2.Split your data correctly into training, validation, and test sets. Justify your split strategy.
+Check explicitly for leakage between splits.
+Run k-fold cross-validation on your best classification model. How does CV performance
+compare to holdout performance? Why might they differ?
+3.4.Plot learning curves for your best model. Is it underfitting, overfitting, or
+well-generalised? What is the correct intervention in each case?
+Deliberately introduce a leakage feature into your pipeline. Observe what happens to
+your metrics. Document the before and after. Explain why this is catastrophic in a
+production system.
+Task 5 Production Decision
+You have run your experiments. Now you must commit to a decision and defend it.
+1.2.Based on all your experiments, which classification model do you deploy? Which
+regression model? Write a model card (approximately half a page) covering:
+○ Chosen model and key hyperparameters
+○ Key metrics on the held-out test set
+○ Deployment threshold and justification
+○ Known limitations of the model
+○ What could go wrong in production
+○ What you would monitor after deployment
+Are linear models sufficient for this problem, or do you think a more complex model is
+needed? What specific evidence from your experiments supports that view?
+Submission Requirements
+What to Submit
+One single Jupyter Notebook (.ipynb) file. Nothing else.
+The Notebook Must:
+•
+•
+•
+•
+•
+Be fully executed with all outputs visible. Do not submit a notebook with empty output
+cells.
+Contain clean, well-structured, and well-commented code. Code that cannot be
+understood will not be graded.
+Include written explanations alongside every result. Numbers without interpretation are
+not answers.
+Address all five tasks in order. Each task must be clearly labelled with a markdown
+header.
+Include a model card as a markdown cell in Task 5.
+Code Quality Standards
+Standard
+Structure
+Comments
+Output
+Variable names
+Plots
+Written reasoning
+Expectation
+Sections clearly separated with markdown headers matching the five
+tasks
+Every non-trivial code block has a comment explaining what it does
+and why
+All cells executed top-to-bottom with outputs visible
+Descriptive variable names not x1, x2, df2
+All plots have titles, axis labels, and legends where applicable
+Every decision (model choice, metric choice, threshold, handling of
+nulls) is explained in prose
+If you cannot explain a piece of code or a decision in your notebook, you have not solved the
+problem. You have outsourced it. You will be asked to explain your work in the session.
+EvaluationComponent
+Criteria
+Weight
+ What We Look For
+Problem Formulation
+Classification Experiment
+Regression Experiment
+Evaluation Integrity
+Production Decision
+15%
+25%
+20%
+20%
+20%
+Formal problem statement, assumptions stated,
+uncertainty identified
+Experiments run, comparison table complete,
+threshold justified
+Regression target derived, models compared,
+regularization explored
+Leakage demo, learning curves, CV vs holdout
+comparison
+Model card complete, decision justified with
+evidence
+Honour Code
+AI tools and LLMs are allowed for learning, brainstorming, debugging, and prototyping. They are
+tools to assist your thinking, not to replace it.
+•
+•
+•
+•
+You must be able to explain every line of code in your notebook.
+You must be able to explain every decision, every metric, and every number.
+If you cannot explain it in the session, it will not count toward your grade.
+Do not submit work you cannot defend. You will just look stupid.
+The point of this assignment is not to get good numbers. It is to understand what those numbers
+mean, make a decision you can defend, and communicate it clearly. A student who achieves PR-AUC
+of 0.55 and can fully explain every decision will be valued more than one who achieves 0.72 and
+cannot explain why.
+Resources
+Dataset
+•
+ Telco Customer Churn https://www.kaggle.com/datasets/blastchar/telco-customer-churn
+Reading
+•
+ ISLP (James et al.) Ch. 3: Linear Regression, Ch. 4: Classification, Ch. 6:
+Regularization https://www.statlearning.com
+•
+ Applied ML and AI for Engineers Jeff Prosise
+Videos
+•
+ Fusemachine Microdegree Machine Learning
+NotebookLLM:
+●
+Research based on the source books and links
+○ https://notebooklm.google.com/notebook/acdf599d-c1d6-4b39-b967-d8fca56a98
+c2
