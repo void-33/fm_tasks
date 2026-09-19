@@ -12,39 +12,39 @@ A fixed pipeline is insufficient because it cannot decide from intermediate evid
 
 ```mermaid
 flowchart TD
-    User([User / Web UI / Test Harness]) --> Gateway[FastAPI Backend :8000]
+    User(["User / Web UI / Test Harness"]) --> Gateway["FastAPI Backend :8000"]
     
     subgraph Gateway Layer
-        RL[Rate Limiter] --> Cache{"Redis Cache Check"}
-        Cache -- "Cache Hit" --> ReturnCache[Return Cached Response]
-        Cache -- "Cache Miss (chat:)" --> LegacyChat[POST /api/v1/chat (W15 Baseline)]
-        Cache -- "Cache Miss (agent:)" --> AgentChat[POST /api/v1/agent/chat]
+        RL["Rate Limiter"] --> Cache{"Redis Cache Check"}
+        Cache -->|"Cache Hit"| ReturnCache["Return Cached Response"]
+        Cache -->|"Cache Miss (chat:)"| LegacyChat["POST /api/v1/chat (W15 Baseline)"]
+        Cache -->|"Cache Miss (agent:)"| AgentChat["POST /api/v1/agent/chat"]
     end
 
     subgraph Agentic Decision Loop
-        AgentChat --> Init[Init State & Fetch Document Catalog]
-        Init --> Decision[Model Decision Step]
-        Decision -->|Prompt + Compact Ledger| LLM[Gemini 2.0 Flash / Ollama Fallback]
-        LLM --> ActionCheck{Action Type}
+        AgentChat --> Init["Init State & Fetch Document Catalog"]
+        Init --> Decision["Model Decision Step"]
+        Decision -->|"Prompt + Compact Ledger"| LLM["Gemini 2.0 Flash / Ollama Fallback"]
+        LLM --> ActionCheck{"Action Type"}
 
-        ActionCheck -- "clarify" --> TerminalClarify[Return needs_clarification]
-        ActionCheck -- "final" --> CiteCheck{Validate Citations vs Ledger}
-        CiteCheck -- "Valid" --> TerminalComplete[Return completed + Citations]
-        CiteCheck -- "No Valid Citations" --> TerminalInsuff[Return insufficient_evidence]
+        ActionCheck -->|"clarify"| TerminalClarify["Return needs_clarification"]
+        ActionCheck -->|"final"| CiteCheck{"Validate Citations vs Ledger"}
+        CiteCheck -->|"Valid"| TerminalComplete["Return completed + Citations"]
+        CiteCheck -->|"No Valid Citations"| TerminalInsuff["Return insufficient_evidence"]
 
-        ActionCheck -- "search" --> ToolExec[retrieve_chunks Tool]
-        ToolExec --> Chroma[(ChromaDB)]
-        Chroma --> Compact[Evidence Compactor & Deduplication]
+        ActionCheck -->|"search"| ToolExec["retrieve_chunks Tool"]
+        ToolExec --> Chroma[("ChromaDB")]
+        Chroma --> Compact["Evidence Compactor & Deduplication"]
         Compact --> LoopBound{"Bound Check (Steps <= 6, Searches <= 4)"}
-        LoopBound -- "Within Bounds" --> Decision
-        LoopBound -- "Cap Reached / No Progress" --> TerminalCap[Return insufficient_evidence]
+        LoopBound -->|"Within Bounds"| Decision
+        LoopBound -->|"Cap Reached / No Progress"| TerminalCap["Return insufficient_evidence"]
     end
 
-    TerminalClarify --> SaveCache[Save to Redis agent: key]
+    TerminalClarify --> SaveCache["Save to Redis agent: key"]
     TerminalComplete --> SaveCache
     TerminalInsuff --> SaveCache
     TerminalCap --> SaveCache
-    SaveCache --> Response([Response to User])
+    SaveCache --> Response(["Response to User"])
 ```
 
 ---
