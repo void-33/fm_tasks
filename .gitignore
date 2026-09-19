@@ -24,6 +24,7 @@
 **/*.xlsx
 **/*assignment*
 **/*.pkl
+**/PLAN.md
 
 
 # Common temporary and OS files

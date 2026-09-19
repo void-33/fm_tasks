@@ -1,118 +1,131 @@
-# AI Assistant — Task 3: Bounded Cross-Source Verification Agent
+# Week 16 Task 3: Agentic Verification Assistant
 
-A production-grade AI assistant with an agentic verification loop built on top of the W15 baseline. The assistant evaluates intermediate retrieval results across independent sources to dynamically decide whether to search another document, refine its query, request clarification, or generate a grounded answer with citations.
+This is my implementation for Task 3 of Week 16. I extended the RAG assistant built in Week 15 by adding an agentic loop for cross-source document verification and comparison. 
 
----
+Instead of doing a single retrieval pass and immediately generating an answer, the model inspects intermediate retrieval results and decides what to do next: search another document, change its query, ask the user to clarify, or give a cited final answer.
 
-## 1. Core Feature & Fixed-Pipeline Rationale
-
-**Feature**: Cross-Source Verification and Comparison. The agent answers queries by inspecting intermediate evidence across multiple uploaded documents. When evidence is insufficient or contradictory, it dynamically issues subsequent searches with adapted queries and source filters, prompts for clarification if the user request is ambiguous, and cites verified document chunks in its final response.
-
-> **Required Fixed-Pipeline Sentence**:  
-> *"A fixed pipeline is insufficient because it cannot decide from intermediate evidence whether another source, a revised query, or clarification is needed; the required search count and order depend on what the previous result reveals."*
+A fixed pipeline is insufficient because it cannot decide from intermediate evidence whether another source, a revised query, or clarification is needed; the required search count and order depend on what the previous result reveals.
 
 ---
 
-## 2. Architecture
+## Architecture
 
 ```mermaid
 flowchart TD
-    User([User / Eval Harness]) --> Gateway[FastAPI Gateway :8000]
+    User([User / Web UI / Test Harness]) --> Gateway[FastAPI Backend :8000]
     
     subgraph Gateway Layer
         RL[Rate Limiter] --> Cache{"Redis Cache Check"}
-        Cache -- "HIT" --> ReturnCache[Return Cached Response]
-        Cache -- "MISS (chat:)" --> LegacyChat[POST /api/v1/chat Baseline]
-        Cache -- "MISS (agent:)" --> AgentChat[POST /api/v1/agent/chat]
+        Cache -- "Cache Hit" --> ReturnCache[Return Cached Response]
+        Cache -- "Cache Miss (chat:)" --> LegacyChat[POST /api/v1/chat (W15 Baseline)]
+        Cache -- "Cache Miss (agent:)" --> AgentChat[POST /api/v1/agent/chat]
     end
 
-    subgraph Bounded Agent Decision Loop
-        AgentChat --> Init[Init Task State & Catalog]
+    subgraph Agentic Decision Loop
+        AgentChat --> Init[Init State & Fetch Document Catalog]
         Init --> Decision[Model Decision Step]
         Decision -->|Prompt + Compact Ledger| LLM[Gemini 2.0 Flash / Ollama Fallback]
         LLM --> ActionCheck{Action Type}
 
         ActionCheck -- "clarify" --> TerminalClarify[Return needs_clarification]
-        ActionCheck -- "final" --> CiteCheck{Validate Citations}
+        ActionCheck -- "final" --> CiteCheck{Validate Citations vs Ledger}
         CiteCheck -- "Valid" --> TerminalComplete[Return completed + Citations]
-        CiteCheck -- "Invalid" --> TerminalInsuff[Return insufficient_evidence]
+        CiteCheck -- "No Valid Citations" --> TerminalInsuff[Return insufficient_evidence]
 
         ActionCheck -- "search" --> ToolExec[retrieve_chunks Tool]
         ToolExec --> Chroma[(ChromaDB)]
-        Chroma --> Compact[Context Engineering: Evidence Compactor]
+        Chroma --> Compact[Evidence Compactor & Deduplication]
         Compact --> LoopBound{"Bound Check (Steps <= 6, Searches <= 4)"}
-        LoopBound -- "Continue" --> Decision
-        LoopBound -- "Cap Hit / No Progress" --> TerminalCap[Return insufficient_evidence]
+        LoopBound -- "Within Bounds" --> Decision
+        LoopBound -- "Cap Reached / No Progress" --> TerminalCap[Return insufficient_evidence]
     end
 
-    TerminalClarify --> SaveCache[Store in Redis agent: namespace]
+    TerminalClarify --> SaveCache[Save to Redis agent: key]
     TerminalComplete --> SaveCache
     TerminalInsuff --> SaveCache
     TerminalCap --> SaveCache
-    SaveCache --> Response([Client Response])
+    SaveCache --> Response([Response to User])
 ```
 
 ---
 
-## 3. Required Write-Up Sections (a–c & Additional Requirements)
+## Design & Implementation Write-Up
 
 ### a. Context Engineering Technique
+
 1. **Technique Used**: Structured Evidence Compaction with Raw Tool-Result Clearing.
-2. **Where Applied**: In `app/services/agent.py` inside `_AgentState.compact_evidence()`, executed immediately after every `retrieve_chunks()` tool invocation.
-3. **Problem Solved**: Repeated searches across multiple documents saturate the context window with redundant, raw Chroma chunks (metadata, embeddings, duplicate text). This context saturation dilutes the prompt, causing the LLM to lose track of the original user prompt or miss contradictions between documents. The compactor strips raw tool payloads, deduplicates chunks by `chunk_id`, caps total retained evidence (`AGENT_MAX_EVIDENCE_ITEMS=12`, `AGENT_MAX_EVIDENCE_CHARS=12000`), and forwards only a structured ledger to the next decision prompt.
+2. **Where Applied**: In `backend/app/services/agent.py` inside `_AgentState.compact_evidence()`, executed right after each `retrieve_chunks()` tool call.
+3. **Problem Solved**: When the agent does multiple searches across different files (like comparing two company policies), dumping raw Chroma query responses (metadata, scores, and full chunks) into the conversation history turn after turn quickly blows up the context window. This causes context saturation—the prompt gets filled with duplicate text and metadata noise, which makes Gemini lose track of the original user prompt or miss contradictions between files. To prevent this, as soon as a search finishes, I discard the raw Chroma payload. I pull out only the text excerpt, deduplicate chunks by `chunk_id`, and append them into a compact ledger capped at 12 items and 12,000 characters. Only this compact ledger gets passed to the next decision prompt.
 
 ### b. Agentic Pattern
-The system implements a **single-agent decision loop** rather than a multi-agent system.
-- **Rationale**: The task requires one coherent decision-maker operating over a bounded toolset. Introducing separate researcher, verifier, and synthesizer sub-agents would create a **sequential bottleneck** (increasing latency) and cause **context fragmentation** without any specialization benefit. Furthermore, multi-agent coordination would multiply prompt tokens across agent boundaries. Using a single agent avoids the **self-verification paradox** by grounding every decision in an immutable evidence ledger validated server-side by deterministic code.
+
+I chose a **single-agent decision loop** instead of a multi-agent system.
+
+The reason is that this task requires one clear decision-maker working through a small, fixed set of tools (searching documents and asking questions). If I had used multiple agents (e.g. a researcher agent, a verification agent, and a writer agent):
+- It would create a **sequential bottleneck**: every step would have to wait for an agent-to-agent message pass, adding unnecessary latency.
+- It would cause **context saturation & high token overhead**: passing prompts and document chunks back and forth across agent boundaries burns a lot of coordination tokens without providing real specialization.
+- We avoid the **self-verification paradox** here not by relying on a second fallible LLM agent to double-check the first, but by having deterministic Python code validate the final citations against the actual ledger IDs before allowing the final answer.
+
+A single agent keeping the original question and the compact ledger together in one place was much simpler, faster, and more reliable.
 
 ### c. Evaluation Harness
-Built from scratch in `evaluation/run_evaluation.py` without third-party evaluation frameworks. It runs 11 deterministic test cases against scripted fake model and tool adapters, guaranteeing offline reproducibility without live API credentials.
-- **Task Completion Rate**: **11/11 (100%)** — All queries reach a valid, safe terminal state (`completed`, `needs_clarification`, `insufficient_evidence`, or `bounded_failure`).
-- **Tool-Call Correctness Rate**: **11/11 (100%)** — Validated argument types, bounded `top_k`, and catalog source verification.
-- **Trajectory Length**: Mean **2.4 iterations** (min 1, max 5, median 2). Multi-source comparison correctly executed 3 iterations (2 searches + 1 final answer).
-- **Failure Taxonomy**:
-  - *Hard Failure* (1 case, TC-07): Consecutive malformed JSON actions exhausted the repair budget, safely ending in `bounded_failure`.
-  - *Soft Failure* (2 cases, TC-08 & TC-10): Injected tool timeout and search cap triggers, safely degrading to `insufficient_evidence`.
-  - *Cascading Soft Failure* (1 case, TC-09): Missing retrieval metadata prevented citation addition, causing the final answer to be rejected and converted into `insufficient_evidence`.
 
-Detailed metrics are recorded in [`evaluation/results.md`](./evaluation/results.md).
+I wrote the evaluation harness from scratch in `evaluation/run_evaluation.py` without using any third-party evaluation libraries (like LangSmith or Ragas). It uses scripted model and tool adapters to test 11 deterministic test cases offline without needing live API keys or Docker.
 
-### Additional Requirement 1: Skill vs. Agent
-> *"This capability could be packaged as a Skill for a fixed, reusable research procedure, but a Skill alone would not satisfy the requirement because the central behavior is runtime selection of the next search/clarification/final action from intermediate evidence; therefore the implementation uses an agent loop."*
+Here is what the harness measures across the 11 test cases:
+- **Task completion rate**: **11/11 (100%)**. Every query safely reached an expected terminal state (`completed`, `needs_clarification`, or `insufficient_evidence`).
+- **Tool-call correctness**: **11/11 (100%)**. The model selected the right tool (`retrieve_chunks`), passed valid arguments (query length under 500 chars, `top_k <= 5`, valid source names), and never called tools after finishing.
+- **Trajectory length**: The average trajectory was **2.4 iterations** (min 1, max 5, median 2). Simple clarifications stopped in 1 step, single searches took 2 steps (search -> answer), and cross-source comparisons took 3 steps (search file 1 -> search file 2 -> compare & answer).
+- **Failure log**:
+  - *Hard failure* (TC-07): The model returned broken JSON twice in a row. It exhausted the 1 allowed repair attempt and stopped safely with `bounded_failure`.
+  - *Soft failure* (TC-08 & TC-10): In TC-08, retrieval timed out so the agent safely returned `insufficient_evidence`. In TC-10, an infinite loop search was stopped by the search cap (4 searches) and safely returned `insufficient_evidence`.
+  - *Cascading soft failure* (TC-09): Retrieval returned chunks missing metadata. The agent skipped the bad chunks, meaning the model had no valid citations for its final answer, so the final step was safely converted to `insufficient_evidence`.
 
-### Additional Requirement 2: Token and Cost Accounting
-The harness measures input, output, and total tokens per iteration and query.
-- Total tokens across all 11 test cases: **4,000 tokens** (mean: **363 tokens/case**).
-- Baseline single-pass comparison: The W15 single-pass baseline consumes ~320 tokens for a single retrieval/generation pair but completely fails on multi-source comparative reasoning (e.g. TC-02 requires 480 tokens across 3 iterations to verify two distinct sources).
-
-### Additional Requirement 3: Failure Injection Test
-- **Injected Fault**: In TC-08, retrieval timeout was injected into `retrieve_chunks()`.
-- **Observed Behavior**: The agent recorded the `tool_error` in its trajectory ledger and safely transitioned to `insufficient_evidence`. It **did not** hallucinate or return an ungrounded answer.
-
-### Additional Requirement 4: Tool vs. Agent Boundary
-External services (Google Gemini API, Ollama, ChromaDB, and Redis) are modeled as **bounded tool and client calls**, not agent-to-agent interactions. Each service call is synchronous or request-response bound with strict schemas, bounded timeouts, and error handling. Because Chroma and Redis do not autonomously plan or negotiate, modeling them as agents would introduce unnecessary abstraction without functional benefit.
+The complete results table generated by the script is in [`evaluation/results.md`](./evaluation/results.md).
 
 ---
 
-## 4. API Endpoints & Request/Response Contracts
+### Additional Requirements
 
-### Agent Endpoint: `POST /api/v1/agent/chat`
+#### 1. Skill vs. Agent
+This capability could be packaged as a Skill for a fixed, reusable research procedure, but a Skill alone would not satisfy the requirement because the central behavior is runtime selection of the next search/clarification/final action from intermediate evidence; therefore the implementation uses an agent loop. A Skill is just a prompt/procedure template, whereas here the model must actively inspect what it found on step 1 to decide whether to search again, change search terms, or ask the user for clarification.
 
-**Request Example**:
-```json
-{
-  "message": "Compare refund policies in policy-a.txt and policy-b.txt.",
-  "model_type": "gemini",
-  "temperature": 0.2,
-  "selected_sources": ["policy-a.txt", "policy-b.txt"],
-  "max_steps": 6
-}
+#### 2. Token and Cost Accounting
+The evaluation harness records prompt tokens, completion tokens, and total tokens per query:
+- Across all 11 evaluation queries, the agent consumed **4,000 total tokens** (an average of **363 tokens per query**).
+- Compared to the W15 single-pass baseline: the legacy baseline uses around ~320 tokens for a single retrieval/generation pass, but it completely fails on cross-source comparison tasks. For example, TC-02 needed 480 tokens across 3 iterations to search both documents and synthesize the answer. Because this is a single-agent system, no tokens were wasted on multi-agent communication.
+
+#### 3. Failure Injection Test
+For the failure injection test, I simulated a retrieval failure in test case TC-08 where `retrieve_chunks()` throws a timeout error (`ToolError`). 
+- **What happened**: The agent caught the error, logged the failure in its trajectory, and did not hallucinate an answer. Because no valid evidence was collected, it returned `insufficient_evidence` with zero fabricated citations.
+
+#### 4. Tool vs. Agent Boundary
+I modeled external services (Gemini, local Ollama, ChromaDB, and Redis) as **bounded tool calls**, not as agent-to-agent interactions. ChromaDB and Redis are passive databases, and Gemini/Ollama are stateless prediction APIs—neither of them has autonomy, memory, or the ability to negotiate. Wrapping them as standard Python tool functions with strict parameter bounds (`top_k`, timeouts, input validation) gives deterministic control without unnecessary protocol overhead.
+
+---
+
+## API Usage
+
+### 1. Agent Endpoint: `POST /api/v1/agent/chat`
+This is the new agentic endpoint. It uses a separate `agent:` prefix in Redis so it never collides with legacy cached responses.
+
+**Request**:
+```bash
+curl -X POST http://localhost:8000/api/v1/agent/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Compare the refund policies in policy-a.txt and policy-b.txt.",
+    "model_type": "gemini",
+    "temperature": 0.2,
+    "selected_sources": ["policy-a.txt", "policy-b.txt"],
+    "max_steps": 6
+  }'
 ```
 
-**Response Example**:
+**Response**:
 ```json
 {
-  "reply": "Policy A provides a 30-day refund window, whereas Policy B allows only 14 days.",
+  "reply": "Policy A offers refunds within 30 days, while Policy B only allows 14 days.",
   "status": "completed",
   "sources": ["policy-a.txt", "policy-b.txt"],
   "iterations": 3,
@@ -149,57 +162,61 @@ External services (Google Gemini API, Ollama, ChromaDB, and Redis) are modeled a
 }
 ```
 
-### Legacy Endpoint: `POST /api/v1/chat`
-Preserved from W15 for single-pass RAG baseline queries. Cache keys are strictly partitioned (`chat:` vs `agent:`), ensuring zero cache collisions.
+### 2. Legacy Endpoint: `POST /api/v1/chat`
+Kept intact from Week 15 for single-pass RAG queries.
 
 ---
 
-## 5. Bounded Configuration Limits
+## Configuration & Bounds
 
-Defined in `backend/app/core/config.py` and `.env`:
-| Parameter | Default | Description |
+All limits are defined in `backend/app/core/config.py` and can be overridden via `.env`:
+
+| Setting | Default | What it does |
 |---|---|---|
-| `AGENT_MAX_STEPS` | `6` | Maximum decision loop iterations per request |
-| `AGENT_MAX_SEARCHES` | `4` | Maximum retrieval calls permitted |
+| `AGENT_MAX_STEPS` | `6` | Max decision loop iterations per request |
+| `AGENT_MAX_SEARCHES` | `4` | Max search tool calls allowed |
 | `AGENT_TOP_K_MAX` | `5` | Hard limit on chunks returned per search |
-| `AGENT_MAX_EVIDENCE_ITEMS` | `12` | Maximum retained items in the compact ledger |
-| `AGENT_MAX_EVIDENCE_CHARS` | `12000` | Character limit for all evidence excerpts combined |
-| `AGENT_TOOL_TIMEOUT_SECONDS` | `10.0s` | Per-tool call timeout |
-| `AGENT_REQUEST_TIMEOUT_SECONDS`| `60.0s` | Overall request processing deadline |
-| `AGENT_MAX_INVALID_ACTION_REPAIRS`| `1` | Max recovery attempts for malformed model JSON |
+| `AGENT_MAX_EVIDENCE_ITEMS` | `12` | Max items saved in the compact evidence ledger |
+| `AGENT_MAX_EVIDENCE_CHARS` | `12000` | Max character length of all saved evidence |
+| `AGENT_TOOL_TIMEOUT_SECONDS` | `10.0` | Timeout per tool call |
+| `AGENT_REQUEST_TIMEOUT_SECONDS` | `60.0` | Total request timeout |
+| `AGENT_MAX_INVALID_ACTION_REPAIRS` | `1` | Max recovery attempts on invalid JSON |
 
 ---
 
-## 6. How to Run & Verify
+## How to Run & Test
 
-### 1. Environment Setup
+### 1. Setup Environment
 ```bash
 cp .env.template .env
-# Edit .env to supply your GEMINI_API_KEY if testing live cloud model
+# Open .env and insert your GEMINI_API_KEY if testing with live Gemini
 ```
 
-### 2. Run Offline Evaluation Harness
-The deterministic harness requires no external API keys, Docker, or Redis:
+### 2. Run the Evaluation Harness (Offline)
+Runs all 11 test cases deterministically without needing API keys or Docker:
 ```bash
 python evaluation/run_evaluation.py
 ```
-*Outputs aggregate metrics and regenerates `evaluation/results.md`.*
+This will run the cases and regenerate `evaluation/results.md`.
 
-### 3. Run Unit & Integration Tests
+### 3. Run Unit Tests
 ```bash
 python -m pytest backend/tests -v
+# or use the standalone test runner:
+python backend/tests/run_tests.py
 ```
 
 ### 4. Build Frontend
 ```bash
-cd frontend && npm run build
+cd frontend
+npm run build
+cd ..
 ```
 
-### 5. Launch Full Production Stack (Docker Compose)
+### 5. Run Full Application with Docker
 ```bash
 docker compose up --build -d
 ```
-- **Web UI**: [http://localhost:3000](http://localhost:3000) (Toggle between "Agent Mode" and "Single-Pass Mode")
-- **Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Health Check**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
-
+- Frontend UI: `http://localhost:3000` (has toggle for Agent Mode vs Single-Pass Mode)
+- Backend Docs: `http://localhost:8000/docs`
+- Health Check: `http://localhost:8000/api/v1/health`
