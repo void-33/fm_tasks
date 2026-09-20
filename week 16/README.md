@@ -1,6 +1,6 @@
-# Week 16 Task 3: Agentic Verification Assistant
+# Week 16 : Agentic Verification Assistant
 
-This is my implementation for Task 3 of Week 16. I extended the RAG assistant built in Week 15 by adding an agentic loop for cross-source document verification and comparison. 
+This is my implementation for Task of Week 16. I extended the RAG assistant built in Week 15 by adding an agentic loop for cross-source document verification and comparison. 
 
 Instead of doing a single retrieval pass and immediately generating an answer, the model inspects intermediate retrieval results and decides what to do next: search another document, change its query, ask the user to clarify, or give a cited final answer.
 
