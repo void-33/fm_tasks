@@ -347,6 +347,12 @@ def _parse_action(text: str) -> AgentAction:
     """
     raw_json = _extract_json(text)
     data = json.loads(raw_json)  # raises json.JSONDecodeError on bad JSON
+    if data.get("citations") is None:
+        data["citations"] = []
+    if data.get("selected_sources") is None:
+        data["selected_sources"] = None
+    if data.get("top_k") is None:
+        data["top_k"] = 3
     return AgentAction(**data)  # raises pydantic ValidationError on bad schema
 
 
@@ -423,10 +429,15 @@ async def run_agent(
         usage: dict = {}
 
         try:
-            raw_text, usage = await model_fn(prompt, _SYSTEM_PROMPT, temperature)
+            if _model_adapter:
+                raw_text, usage = await model_fn(prompt, _SYSTEM_PROMPT, temperature)
+            else:
+                raw_text, usage = await model_fn(
+                    prompt, _SYSTEM_PROMPT, temperature, model_type=model_type
+                )
             state.token_usage.add(usage)
+            state.fallback_used = state.fallback_used or usage.get("fallback_used", False)
             if usage.get("provider", "gemini") != "gemini":
-                state.fallback_used = True
                 state.model_used = usage.get("provider", "ollama")
         except Exception as e:
             state.record_failure("model_call", state.iterations, str(e), "hard")
@@ -448,10 +459,23 @@ async def run_agent(
                     "Please respond with ONLY a valid JSON action object."
                 )
                 try:
-                    raw_text2, usage2 = await model_fn(
-                        repair_prompt, _SYSTEM_PROMPT, temperature
-                    )
+                    if _model_adapter:
+                        raw_text2, usage2 = await model_fn(
+                            repair_prompt, _SYSTEM_PROMPT, temperature
+                        )
+                    else:
+                        raw_text2, usage2 = await model_fn(
+                            repair_prompt,
+                            _SYSTEM_PROMPT,
+                            temperature,
+                            model_type=model_type,
+                        )
                     state.token_usage.add(usage2)
+                    state.fallback_used = state.fallback_used or usage2.get(
+                        "fallback_used", False
+                    )
+                    if usage2.get("provider", "gemini") != "gemini":
+                        state.model_used = usage2.get("provider", "ollama")
                     action = _parse_action(raw_text2)
                 except Exception as repair_err:
                     state.record_failure(

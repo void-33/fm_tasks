@@ -136,6 +136,19 @@ async def _call_ollama(message: str, system_prompt: str, temperature: float) -> 
     return response.choices[0].message.content
 
 
+async def _call_ollama_structured(
+    prompt: str, system_prompt: str, temperature: float
+) -> tuple[str, dict]:
+    text = await _call_ollama(prompt, system_prompt, temperature)
+    return text, {
+        "input_tokens": None,
+        "output_tokens": None,
+        "total_tokens": None,
+        "provider": f"ollama/{settings.ollama_model}",
+        "fallback_used": False,
+    }
+
+
 # ── Public interface: legacy path (unchanged) ─────────────────────────────────
 
 async def generate_response(
@@ -194,6 +207,7 @@ async def generate_structured_action(
     prompt: str,
     system_prompt: str,
     temperature: float = 0.2,
+    model_type: str = "gemini",
 ) -> tuple[str, dict]:
     """Request a structured JSON action from the model.
 
@@ -206,6 +220,9 @@ async def generate_structured_action(
       provider: 'gemini' | 'ollama/<model>' | 'none'
       fallback_used: bool
     """
+    if model_type == "ollama":
+        return await _call_ollama_structured(prompt, system_prompt, temperature)
+
     try:
         text, usage = await _call_gemini_structured(prompt, system_prompt, temperature)
         usage["fallback_used"] = False

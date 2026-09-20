@@ -107,11 +107,23 @@ export default function App() {
     }
   }, [])
 
+  const fetchSources = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/sources`)
+      if (!res.ok) return
+      const data = await res.json()
+      setUploadedDocs(data.sources.map(name => ({ name, enabled: true })))
+    } catch {
+      // Source loading is best effort; the chat endpoint remains available.
+    }
+  }, [])
+
   useEffect(() => {
     fetchHealth()
+    fetchSources()
     const id = setInterval(fetchHealth, 10000)
     return () => clearInterval(id)
-  }, [fetchHealth])
+  }, [fetchHealth, fetchSources])
 
   const sendMessage = async () => {
     const text = input.trim()
@@ -211,11 +223,7 @@ export default function App() {
       const res = await fetch(`${API_BASE}/ingest/file`, { method: 'POST', body: form })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail)
-      setUploadedDocs(prev => {
-        const exists = prev.some(doc => doc.name === file.name)
-        if (exists) return prev
-        return [...prev, { name: file.name, enabled: true }]
-      })
+      await fetchSources()
       setUploadStatus('success')
     } catch (e) {
       setUploadStatus('error')
@@ -231,6 +239,16 @@ export default function App() {
         doc.name === name ? { ...doc, enabled: !doc.enabled } : doc
       )
     )
+  }
+
+  const clearKnowledgeBase = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/sources`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Unable to clear knowledge base')
+      setUploadedDocs([])
+    } catch {
+      setUploadStatus('error')
+    }
   }
 
   return (
@@ -297,6 +315,13 @@ export default function App() {
         <input ref={fileRef} type="file" accept=".pdf,.txt" className="file-input" />
         <button className="btn btn-secondary" onClick={uploadFile}>
           {uploadStatus === 'uploading' ? 'Ingesting…' : 'Ingest File'}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={clearKnowledgeBase}
+          disabled={uploadedDocs.length === 0}
+        >
+          Clear Knowledge Base
         </button>
         {uploadStatus === 'success' && <p className="status-ok">✓ Ingested successfully</p>}
         {uploadStatus === 'error' && <p className="status-err">✗ Ingestion failed</p>}

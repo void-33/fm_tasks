@@ -10,7 +10,14 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from typing import Any, Optional
 
-from app.core.cache import get_cached, make_cache_key, make_agent_cache_key, set_cached, check_redis_health
+from app.core.cache import (
+    check_redis_health,
+    get_cached,
+    invalidate_response_cache,
+    make_agent_cache_key,
+    make_cache_key,
+    set_cached,
+)
 from app.core.limiter import limiter
 from app.services.llm import generate_response, check_ollama_health
 from app.services import rag
@@ -215,18 +222,30 @@ async def agent_chat(request: Request, body: AgentChatRequest):
     return AgentChatResponse(**response_dict)
 
 
-# ── Ingestion endpoints (unchanged) ───────────────────────────────────────────
+# ── Knowledge-base endpoints ──────────────────────────────────────────────────
+
+@router.get("/sources")
+async def sources():
+    return {"sources": await rag.list_available_sources()}
+
+
+@router.delete("/sources")
+async def clear_sources():
+    await rag.clear_collection()
+    await invalidate_response_cache()
+    return {"status": "cleared", "sources": []}
 
 @router.post("/ingest/text")
 async def ingest_text(body: IngestTextRequest, background_tasks: BackgroundTasks):
-    """Ingest raw text in the background."""
-    background_tasks.add_task(rag.ingest_text, body.text, body.source_name)
-    return {"status": "accepted", "message": "Text ingestion started in background."}
+    """Ingest raw text before acknowledging it, so the next query sees it."""
+    count = await rag.ingest_text(body.text, body.source_name)
+    await invalidate_response_cache()
+    return {"status": "ingested", "source": body.source_name, "chunks": count}
 
 
 @router.post("/ingest/file")
 async def ingest_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    """Upload and ingest a PDF or TXT file in the background."""
+    """Upload and ingest a PDF or TXT file before returning."""
     try:
         content = ""
         if file.filename.endswith(".pdf"):
@@ -247,8 +266,9 @@ async def ingest_file(background_tasks: BackgroundTasks, file: UploadFile = File
         if not content.strip():
             raise HTTPException(status_code=400, detail="File has no readable content.")
 
-        background_tasks.add_task(rag.ingest_text, content, file.filename)
-        return {"status": "accepted", "filename": file.filename}
+        count = await rag.ingest_text(content, file.filename)
+        await invalidate_response_cache()
+        return {"status": "ingested", "filename": file.filename, "chunks": count}
     except HTTPException:
         raise
     except Exception as e:

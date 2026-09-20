@@ -47,20 +47,46 @@ async def embed(text: str) -> list:
     return response.embeddings[0].values
 
 
+async def embed_many(texts: list[str]) -> list[list[float]]:
+    """Embed chunks in batches so ingestion does not make one API call per chunk."""
+    client = get_genai()
+    if not client:
+        raise ValueError("GEMINI_API_KEY not set.")
+    loop = asyncio.get_event_loop()
+    embeddings = []
+    for start in range(0, len(texts), 100):
+        batch = texts[start : start + 100]
+        response = await loop.run_in_executor(
+            None,
+            lambda batch=batch: client.models.embed_content(
+                model="gemini-embedding-2", contents=batch
+            ),
+        )
+        embeddings.extend(item.values for item in response.embeddings)
+    return embeddings
+
+
 async def ingest_text(text: str, source_name: str = "upload") -> int:
     collection = get_chroma()
     chunks = chunk_text(text)
     if not chunks:
         return 0
 
-    embeddings = []
-    for chunk in chunks:
-        embeddings.append(await embed(chunk))
+    embeddings = await embed_many(chunks)
 
+    # Replace a previous upload with the same filename instead of leaving stale chunks.
+    collection.delete(where={"source": source_name})
     ids = [f"{source_name}_{i}" for i in range(len(chunks))]
     metadatas = [{"source": source_name} for _ in chunks]
     collection.add(embeddings=embeddings, documents=chunks, metadatas=metadatas, ids=ids)
     return len(chunks)
+
+
+async def clear_collection() -> None:
+    """Remove all persisted document chunks from the knowledge base."""
+    collection = get_chroma()
+    if collection.count():
+        collection.delete(ids=collection.get(include=[])["ids"])
 
 
 async def retrieve_context(

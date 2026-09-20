@@ -64,6 +64,22 @@ async def set_cached(key: str, value: str) -> None:
         logger.warning(f"Failed to set cache: {e}")
 
 
+async def invalidate_response_cache() -> None:
+    """Discard responses produced from the previous knowledge-base contents."""
+    r = await get_redis()
+    if not r:
+        return
+    try:
+        keys = []
+        for pattern in ("chat:*", "agent:*"):
+            async for key in r.scan_iter(match=pattern):
+                keys.append(key)
+        if keys:
+            await r.delete(*keys)
+    except Exception as e:
+        logger.warning(f"Failed to invalidate response cache: {e}")
+
+
 async def check_redis_health() -> bool:
     r = await get_redis()
     if not r:
