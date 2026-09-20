@@ -62,7 +62,33 @@ async def embed_many(texts: list[str]) -> list[list[float]]:
                 model="gemini-embedding-2", contents=batch
             ),
         )
-        embeddings.extend(item.values for item in response.embeddings)
+        batch_embeddings = [item.values for item in response.embeddings]
+        if len(batch_embeddings) == len(batch):
+            embeddings.extend(batch_embeddings)
+            continue
+
+        # Some SDK/model combinations treat a list as one content item. Never
+        # pass a partial embedding list to Chroma; recover one vector per chunk.
+        logger.warning(
+            "Embedding batch returned %s vectors for %s chunks; retrying individually.",
+            len(batch_embeddings),
+            len(batch),
+        )
+        semaphore = asyncio.Semaphore(8)
+
+        async def embed_with_limit(chunk: str) -> list:
+            async with semaphore:
+                return await embed(chunk)
+
+        individual_embeddings = await asyncio.gather(
+            *(embed_with_limit(chunk) for chunk in batch)
+        )
+        embeddings.extend(individual_embeddings)
+
+    if len(embeddings) != len(texts):
+        raise RuntimeError(
+            f"Embedding count mismatch: expected {len(texts)}, got {len(embeddings)}."
+        )
     return embeddings
 
 
