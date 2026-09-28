@@ -1,0 +1,1189 @@
+Article
+Integrating Message Content and Propagation Path for Enhanced
+False Information Detection Using Bidirectional Graph
+Convolutional Neural Networks
+JieHu1,* ,MeiYang1,BingbingTang1andJianjunHu2
+1 CollegeofBigDataStatistics,GuizhouUniversityofFinanceandEconomics,Guiyang550025,China;
+ymei_9600@163.com(M.Y.);tbb15838035836@163.com(B.T.)
+2 DepartmentofComputerScienceandEngineering,UniversityofSouthCarolina,Columbia,SC29208,USA;
+jianjunh@cec.sc.edu
+* Correspondence:jiehu@mail.gufe.edu.cn
+Abstract: We investigate the impact of textual content and its structural characteristics
+onthedetectionoffalseinformation. WeproposeaBidirectionalGraphConvolutional
+NeuralNetwork(ICP-BGCN)thatintegratesmessagecontentwithitspropagationpaths
+forenhanceddetectionperformance. Ourapproachleverageswebpropagationtopology
+bytransformingdisconnecteduserpostsintoabidirectionalpropagationgraph,whichinte-
+gratestop-downandbottom-uppathwaysderivedfrompostforwardingandcommenting
+relationships. UsingBERTembeddings,weextractcontextualsemanticfeaturesfromboth
+sourcetextsandtheirpropagatedcounterparts,whichareembeddedasnodeattributes
+within the propagation graph. The bidirectional graph convolutional neural network
+subsequentlylearnsthefeaturerepresentationsoftheeventpropagationnetworkduring
+informationdissemination,mergingtheserepresentationswiththeoriginaltextcontent
+featurestoachievecomprehensivedisinformationdetection. Experimentalresultsdemon-
+stratesignificantimprovementsoverexistingmethods. OnbenchmarkdatasetsTwitter15
+andTwitter16,ourmodelachievesaccuracyratesof89.7%and91.7%,respectively,out-
+performingstate-of-the-artbaselinesby1.1%and3.7%. TheproposedICP-BGCNexhibits
+strongcross-domaingeneralization,attaining84.4%accuracyonthePhemedatasetand
+AcademicEditors:GianlucaLaxand
+achievingimprovementsof1.8%inaccuracyand3.8%inMacro-F1scoreonSemEval-2017
+AntoniaRusso
+Task8.
+Received:24January2025
+Revised:19March2025
+Keywords: falseinformation;bidirectionalgraphconvolutionalnetworks;propagation
+Accepted:20March2025
+Published:21March2025 structure;featurefusion
+Citation: Hu,J.;Yang,M.;Tang,B.;
+Hu,J.IntegratingMessageContent
+andPropagationPathforEnhanced
+1. Introduction
+FalseInformationDetectionUsing
+BidirectionalGraphConvolutional Currently,theglobalnumberofInternetusersis5.16billion,with4.76billionsocial
+NeuralNetworks.Appl.Sci.2025,15,
+mediausers, constitutingnearly60%oftheglobalpopulation[1]. Withtheaccelerated
+3457. https://doi.org/10.3390/
+developmentofsocialnetworkingplatforms,suchasTwitterandFacebook,theprocess
+app15073457
+ofinformationsharinganddisseminationhassignificantlyaccelerated[2]. Whilesocial
+Copyright:©2025bytheauthors.
+mediaprovidesaplatformforfreeanddiverseformsofexpression,itinadvertentlyfacil-
+LicenseeMDPI,Basel,Switzerland.
+itatesthespreadofmisinformation,whichoftenfailstoreflectthetruenatureofevents.
+Thisarticleisanopenaccessarticle
+Forinstance,therecentlycirculatingclaimthat“infectionwithMycoplasmapneumonia
+distributedunderthetermsand
+conditionsoftheCreativeCommons willresultinpneumoniaand‘whitelung’”notonlymisleadspublicperceptionandin-
+Attribution(CCBY)license ducespsychologicalanxietybutalsotriggerssocialpanic,disruptsdailylife,andseverely
+(https://creativecommons.org/ underminessocialstability. Therefore,tomitigatethedetrimentaleffectsofmisleading
+licenses/by/4.0/).
+Appl.Sci.2025,15,3457 https://doi.org/10.3390/app15073457
+
+Appl.Sci.2025,15,3457 2of21
+contentandtomaintainsocialcohesionandstability,itisimperativetoaccuratelyidentify
+falseinformation.
+Falseinformationistypicallydefinedasunsubstantiatedcontentthatlackssupporting
+evidence,authoritativesources,orofficialstatements[3]. Inrecentyears,scholarsglobally
+havedemonstratedsignificantinterestinthedetectionoffalseinformation[4]. Previous
+studies primarily employed manual feature extraction techniques to derive significant
+attributesfromvariousaspects,includingtextcontent[5],userinformation[6],andcom-
+municationcharacteristics[7],forfalseinformationdetection. However,thesemethods
+dependonmanualfeatureextraction,whichnecessitatesextensivedomainexpertiseand
+manualannotationefforts. Thevastscaleandcomplexityofsocialmediadatasetsfurther
+presentsubstantialtechnicalchallenges. Withtheprogressofdeeplearning,scholarsare
+adoptingthesemodelstoautonomouslyidentifyeffectivecharacteristicsfordisinformation
+detection. Maetal.[8]wereamongthefirsttoapplydeeplearningmodelstothefield
+of false information detection. They input individual sentences into a recurrent neural
+network,usingthehiddenlayervectorstorepresentinformationfeaturesforfalseinforma-
+tiondetection. Akeycharacteristicoffalseinformationisitsrapiddissemination,often
+exhibitinga“viral”propagationpattern. Moreover,misinformationoftenspreadsmore
+extensively,quickly,andbroadlythanfactualinformation,potentiallycausingsignificant
+confusion[3]. Consequently,researchershavesoughttocapturethetemporalsequence
+characteristics of false information propagation by analyzing its propagation paths or
+networksonsocialmedia, therebyconstructingtime-seriesfeaturemodels[9,10]. With
+thecontinuedadvancementofgraphrepresentationlearning,falseinformationdetection
+utilizinggraph-basedapproacheshasbecomeaprominentresearchfocus. Bianetal.[11]
+andRahimietal.[12]constructedgraphstructuresbasedonreplyorretweetrelationships,
+analyzingfalseinformationthroughedge-basedfeatureaggregation. However,mostdeep
+learning-basedrumordetectionmethodsrelyonreliablepropagationstructures(whichmay
+notalwaysbeavailable)andlarge-scaledatasetstoenablesuchanalysis. Thesemethods
+notonlyfailtoaccountfortheinstabilityinmisinformationpropagationstructuresbutalso
+leadtosubstantialresourceconsumptionduringdatapreprocessingandmodeltraining.
+Ourapproachisbasedontheobservationthatthereinforcementofcommunitystruc-
+turesplaysasignificantroleinenhancingtheefficacyofinformationdissemination,par-
+ticularlyinsocialnetworks,whererumorpropagationstructuresdemonstratesuperior
+informationrepresentationcapabilities[13]. However,existingdeeplearning-basedrumor
+detectionmodelsoftenoverlooktheinherentuncertaintyfactorsinrealsocialnetworks
+when analyzing these propagation structures. Additionally, the effective utilization of
+originaltextfeaturesandtheirintegrationwithotherfeaturesremainsanarearequiring
+furtherexploration. Inthisstudy,weproposeamulti-sourceinformationfusionapproach
+for misinformationdetection, which integratesglobal structural information withlocal
+semantic features of messages, leveraging both message content and propagation path
+featurestoimprovedetectionaccuracyandrobustness. Thediscreteandfragmentednature
+ofposttextsistransformedintoapropagationgraphstructure,whiletheBERT[14](Bidi-
+rectionalEncoderRepresentationsfromTransformers)modelisemployedtoextractdeep
+semanticfeaturesfrombothsourcetextsandpropagatedtexts. Asanaugmentednode
+attributewithinthedisseminationgraphframework,thebidirectionalgraphconvolutional
+neuralnetworkisutilizedtocapturethetopologyoftheeventdiffusionnetworkduring
+theanalysisofinformationpropagationpatterns. Finally,theresultingpropagationgraph,
+enrichedwithreplysemanticinformation,iscombinedwiththesemanticfeaturesofthe
+sourcedeclarationandprocessedbytheclassifier. Basedontheinterplaybetweendissemi-
+nationarchitectureandcontent,theglobalforwardingrelationshipsareincorporatedinto
+thefalseinformationdetectionprocess. Thekeycontributionsofourstudyareasfollows:
+
+Appl.Sci.2025,15,3457 3of21
+• Weleveragethestructuralinformationofinformationdisseminationtoproposean
+effectivedisinformationdetectionmethod,termedICP-BGCN.Duringthepropaga-
+tionoffalseinformation,interactivedata,suchasusercommentsandretweets,are
+embeddedandrepresentedusingabidirectionalgraphconvolutionalneuralnetwork.
+Thisnetworkextractsglobalcouplingfeaturesfromboththenodeswithinthemessage
+propagationgraphandtherelationshipsamongthem,enablingfeatureextractionof
+disinformationdisseminationdatabasedongraph-basedinformationrepresentation.
+• The proposed method is validated using two real-world datasets, Twitter15 and
+Twitter16. Experimentalresultsshowthattheproposedmodeloutperformsexisting
+baselinemethodsindetectingfalseinformation. Therationalityandeffectivenessof
+theproposedICP-BGCNmethodarefurtherconfirmedthroughablationexperiments.
+• Weinvestigatethecharacteristicsofpropagationpathsforbothdisinformationand
+non-disinformation, as well as the differences in their dissemination dynamics,
+through visualization and statistical analysis of various topological metrics of the
+messagepropagationgraphs,includingdegreedistribution,diameter,andaverage
+pathlengthofnetworknodes.
+2. RelatedWork
+Inrecentyears,avarietyoftheoriesandtechniqueshavebeenproposedforidentifying
+falseinformation. Inthissection,wesummarizetheprevailingmethodsfordisinformation
+detectionintotwocategories:content-basedattributesandpropagationstructuralelements.
+2.1. FalseInformationDetectionBasedonContentFeatures
+Content-based detection methods focus on extracting text features, such as lexical
+features,textlength,andgrammaticalfeatures,todistinguishbetweenfalseinformation
+andgenuineinformationbasedoncontent. Earlystudiesutilizedclassificationalgorithms,
+including Bayes [15], Support Vector Machine (SVM) [16], and random forest [17], to
+classifyfalseinformationbasedoncontentrepresentation. Choudhuryetal.[18]usedan
+optimizedgeneticalgorithmtosolvetheproblemoffakenewsdetectionandcompared
+theperformanceofseveralcommonclassifiers,includingsupportvectormachine,Naive
+Bayes,randomforest,andlogisticregression,totesttheireffectivenessinidentifyingfake
+newsindifferentdatasets.
+Deeplearningapproachesfacilitatetheautomatedlearningofhigh-leveldatacharac-
+teristicsandenablemoreaccurateidentificationofpatternsandcorrelationswithinthedata,
+establishingthemselvesasthepredominantdetectionmethodology. Nasiretal.[19]pro-
+posedaninnovativehybriddeeplearningframeworkthatintegratesconvolutionalneural
+networks(CNNs)withrecurrentneuralnetworks(RNNs)fortheclassificationofdeceptive
+information. Shelkeetal.[20]utilizedfoundationalattributesfrommultiplecategories,
+includinguser,content,andlexicalfeatures,anddevelopedahybriddeeplearningmodel
+thatcombinesBidirectionalLSTM(BiLSTM)withMultilayerPerceptron(MLP)frameworks
+toimprovedetectionaccuracy. Yangetal.[21]employedBERTandCNNtoextracttextual
+informationfromusercomments,followedbyLSTMtofurtherextractsentimentfeatures,
+which were then fused with content features to form false information representations.
+Lietal.[22]utilizedthepre-trainedBERTmodeltotransformrawWeibotextintovector
+representations,whichwerethenfedintoarecurrentconvolutionalneuralnetworkforthe
+identificationoffalseinformation. FengLizhouetal.[23]proposedadetectionmethod
+basedongraphconvolutionalnetworksintegratedwithanattentionmechanism,which
+incorporates the forwarding relationship features and semantic characteristics of texts
+withincomments. Chenetal.[24]pioneeredtheintegrationoftheattentionmechanism
+witharesidualnetworkforrumordetection. First,theresidualnetwork,enhancedbythe
+
+Appl.Sci.2025,15,3457 4of21
+attentionmechanism,capturedlong-rangedependencieswithinthetext. Subsequently,
+CNNwasusedtoselectimportantcomponentsandlocalfeatures,achievingnotableresults
+in false information detection and early detection tasks. Furthermore, to improve the
+effectiveness of disinformation detection, Weng et al. [25] and Lai et al. [26] employed
+dynamicfeaturevectorsandlargelanguagemodelingapproaches,respectively,tocapture
+semanticfeatures. However,maliciousactorsmayemploydeepfaketechnologytomimic
+thewritingtechniquesandexpressionstylesofrealevents,therebyevadingdetection. This
+rendersmethodsrelyingsolelyoncontentfeaturesineffectiveincapturingrelevantfeatures
+forfalseinformationrecognition[27].
+2.2. FalseInformationDetectionBasedonPropagationStructureandContentFeatures
+Withtherapiddevelopmentofgraphlearningtechniques,researchershavediscovered
+significantdifferencesindiffusiontopologybetweenfalseinformationandauthenticcon-
+tentwithinsocialnetworks,promptingpropagationpathanalysistobecomeoneofthecore
+foundationsforonlinerumoridentification. Thepropagationstructurefeaturereferstoa
+patternfeatureoffalseinformationduringitsspread,encompassingtheinteractionsamong
+posts,theextentoftheformedpropagationroute,andthedurationofthetransmissiontime.
+Investigatorsconcentrateondiscerningthedisparitiesinthepropagationtraitsofdeceitful
+informationversusveraciouscontentfordetectionpurposes. Certainacademicsemploy
+deeplearningtechniquestoextractthesequentialattributesofmisinformationpropagation
+over time, drawing from the dissemination pathways or networks within social media
+platforms,intendingtoformulateatemporalfeaturemodel. Chenetal.[28]proposeda
+RecurrentNeuralNetwork(RNN)-basedmodelthatlearnsdeeprepresentationsoftweetse-
+quencesforfalseinformationdetection. Someresearchersalsorepresentthenon-sequential
+propagationstructurefeaturestorealizefalseinformationdetection. Maetal.[8]usethe
+non-sequentialpropagationstructureoffalseinformationtolearnthefeaturesthatdistin-
+guishthecontentoftweets. Thecompletepropagationstructurecanextractfeaturesmore
+comprehensivelythanthepartialstructure. Bianetal.[11]usedthegraphconvolutional
+networkmethodtorealizetheconstructionofafalseinformationdetectionmodelfromtwo
+directionsofpropagationanddiffusion. Fengetal.[29]alsomodeledthefalseinformation
+propagationstructureasabidirectionalgraphanddesignedthreeinterpretablebidirec-
+tionalgraphdataaugmentationstrategies. Usingnode-levelandgraph-levelcontrastive
+learningtocapturethepropagationcharacteristicsofevents. HuDouetal.[30]presenteda
+disinformationdetectionmethodgroundedinamulti-relationpropagationtree,addressing
+thelimitationwherebymostcurrentpropagationcharacteristic-basedapproachesmerely
+takeintoaccounttheovertinteractiondynamicsduringdisseminationwhileneglectingthe
+modelingoflatentrelationships. QiangZishanetal.[31]introducedasocialmediarumor
+detectionmodelintegratingdynamicpropagationandcommunitystructure,whichsolved
+the problem of insufficient utilization of time information in existing rumor detection
+models. Verificationusingthecommunitystructurecharacteristicsoffalseinformation
+propagationcanimprovetheperformanceoftherumordetectionmodel. Linetal.[32]
+representedfalseinformationasdifferentpropagationthreadsanddesignedahierarchical
+cue encoding mechanism to learn the context representation of false information from
+alanguage-independentperspective. Theyadvocatedaninnovativezero-shotdetection
+frameworkpredicatedoncuelearning,whichcanidentifyfalseinformationfromdifferent
+domainsordifferentlanguages.
+False information detection methods based on propagation relationships rely on
+completenetworktopologydata. Whentherearemissingrecordsorincompletedatainthe
+propagationlinks,theirdetectionaccuracysignificantlydecreases. Furthermore,existing
+methodsmainlyfocusonthestructuralfeaturesofthepropagationpath,whileneglecting
+
+Appl.Sci.2025,15,3457 5of21
+thesemanticinformationofthepropagatedcontentitself. Thismayleadtomisjudgments
+aboutthenatureoftheinformation,suchasitsauthenticityoremotionaltendency.
+2.3. Content-BasedandPropagationPath-BasedMethods
+Recent studies have increasingly focused on combining content-based and propa-
+gation path-based methods to enhance the accuracy and robustness of misinformation
+detection. Forinstance,theGCANmodelproposedbyLuandLi[33]integratestextualcon-
+tentwithretweetsequencesthroughaco-attentionmechanism,achievinga16%accuracy
+improvementwhileprovidingexplainablepredictions. Similarly,HeterogeneousGraph
+AttentionNetworks(Huangetal.)[34]constructtweet-word-usergraphstocaptureglobal
+semanticrelationshipsandstructuralpropagationpatterns,enablingearly-stagerumor
+detection. GARD(Taoetal.)[35]furtheremphasizessemanticevolvementduringinforma-
+tiondiffusionbycombininggraphautoencoderswithpropagationstructures,improving
+both robustness and early detection performance. Additionally, the GCNs-MT model
+(Changetal.)[36]employsmemory-augmentedTransformersandGraphConvolutional
+Networkstojointlymodeltextualdependenciesandpropagationdynamics,demonstrating
+strongcross-datasetgeneralizationcapabilities. Theseapproacheshighlightthecomple-
+mentary strengths of content and propagation features, advancing detection accuracy,
+explainability,andtimeliness.
+However,thesemethodsoverlookthefeaturerepresentationofpropagationnodes
+whilefocusingontheexpressionofpropagationrelationsduringtheprocess. Theyalsofail
+toconsidertheimpactofusingdeepsemanticfeaturesfromthepropagatedtextasinitial
+nodefeaturesforfalseinformationdetection. Furthermore,duringfeatureextraction,the
+originaltextfeaturesareunderutilized,andthefusionoftheoriginaltextfeatureswith
+otherfeaturesisinadequate. Toaddresstheseissues,thispaperproposesamulti-source
+informationfusionapproachforfalseinformationdetectionbasedongraphconvolutional
+networks. Thismethodconstructsapropagationgraphbycombiningpropagationusers
+andstructures,embeddingboththesourceandpropagatedtexts’semanticinformationas
+nodefeatures. Additionally,itfullyleveragesthesourcetextinformationformulti-feature
+fusion,furtherimprovingdetectionperformance.
+3. Methodology
+Toaddresstheaforementionedchallenges,thisstudyproposesICP-BGCN(Integrated
+Content-PropagationBidirectionalGraphConvolutionalNetwork),anovelframeworkfor
+falseinformationdetectionthatintegratesoriginaltextsemantics,propagationcontext,and
+structuraldiffusionpatterns. AsillustratedinFigure1,theframeworkcomprisesthree
+interconnectedmodules:
+Module 1. Propagation Structure Modeling: A hierarchical propagation graph is
+constructedusingcomment–retweetrelationships. Semanticembeddingsgeneratedby
+Module2aremappedtographnodestoinitializetheirrepresentations. TheDropEdge
+technique [37] is then applied to both top-down and bottom-up propagation graphs to
+mitigate over-smoothing and enhance model robustness. Finally, a bidirectional graph
+convolutional network (GCN) captures nuanced node interaction patterns within the
+propagationstructure.
+Module2. TextualFeatureExtraction: Apre-trainedlanguagerepresentationmodel
+(BERT) encodes the source post and its associated comments/retweets to extract deep
+semanticfeatures.
+Module3. FalseinformationDetection: Propagationstructuralfeaturesarefusedwith
+textualsemanticsthroughattentionmechanisms. Theenrichedrepresentationsarefedinto
+aclassifiertopredictwhetherthesourcepostisfalseinformation.
+
+Appl. Sci. 2025, 15, x FOR PEER REVIEW  6 of 22
+
+Module 3. False information Detection: Propagation structural features are fused
+Appl.Sci.2025,15,3457
+6of21
+with textual semantics through attention mechanisms. The enriched representations are
+fed into a classifier to predict whether the source post is false information.
+TD-Propagation
+| ╙Extraction of structural features |     |     |     |     | Feature |     |     |     |     |     |     |     |
+| ---------------------------------- | --- | --- | --- | --- | ------- | --- | --- | --- | --- | --- | --- | --- |
+Propagation
+Feature
+.
+|     |     |     | DropEdge | GCN | BU-Propagation  |     |     |     |     |     |     |     |
+| --- | --- | --- | -------- | --- | --------------- | --- | --- | --- | --- | --- | --- | --- |
+Feature
+.
+|     |     |     |     |     |     | .   |     |     |     | R   |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+Classfiler
+| Input Sample |       |        | Node Feature Embedding |          |     |     |     |          |     | N               |     |     |
+| ------------ | ----- | ------ | ---------------------- | -------- | --- | --- | --- | -------- | --- | --------------- | --- | --- |
+|              |       |        | Trm[CLS]               | Trm[CLS] |     |     |     | Fusion   |     |                 |     |     |
+|              | [CLS] | E[CLS] |                        | T[CLS]   |     |     |     | Features |     | ╛Classification |     |     |
+Text
+| NEWS          | token1 |     | Trm1 | Trm1    |     |            |     |     |     |     |     |     |
+| ------------- | ------ | --- | ---- | ------- | --- | ---------- | --- | --- | --- | --- | --- | --- |
+|               |        | E1  |      | T1      |     |            |     |     |     |     |     |     |
+| Reply3 Replyn | token2 |     |      |         |     | Reply text |     |     |     |     |     |     |
+|               |        | E2  | Trm2 | Trm2 T2 |     |            |     |     |     |     |     |     |
+Reply1 Reply2
+...
+|                               | ...    | ... | ...  | ...  |           |     |     |     |     |     |     |     |
+| ----------------------------- | ------ | --- | ---- | ---- | --------- | --- | --- | --- | --- | --- | --- | --- |
+|                               | tokenn |     | Trmn | Trmn | Semantic  |     |     |     |     |     |     |     |
+| ╚Information content feature  |        | En  |      | Tn   | Features  |     |     |     |     |     |     |     |
+representation
+
+Figure1.FrameworkofICP-BGCNmodel.
+Figure 1. Framework of ICP-BGCN model.
+3.1. ConstructionofInformationPropagationGraphs
+|     | 33.1.1. .C1.onBsutriludcitniognt hofe IInnfoformrmataiotino nPrPorpoapgaatgioanti oGnraGprhasp  |     |     |     |     |     |     | h   |     |     |     |     |
+| --- | ----------------------------------------------------------------------------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+3.1.1. BInuiclodninstgr uthceti nIngfothrmeaintifoonrm Parotipoangdatiisosnem Girnaapthio ngraph,wetreateachpostasanode,
+whilIen ecdongsetsrubcettiwnge etnhep ionsftosrmaraetidoenfi dniesdsembaisneadtioonn gcroamphm, ewnet tarnedat reeatcwhe petosrte laast iao nnsohdipe,s .
+wShpielcei fiedcaglelys, bifettwweeeetnA poissatsr aerpely dteofitnweede btaBs,etdhe onnt hcoemremweilnltb aenadd rieretwcteedete rdeglaetiboentwsheiepns.A Spaen-d
+cBifiicnatlhlye, gifr atwpheetot Ain disi caa rteepthlye tdoi rtewcteieotn Bo,f tihnefno rtmhearteio wniflllo bwe. aT hduirsescetettdin egdCge= be{tcw ,ece n, .A.. a,cnmd}
+1 2
+Bf oinr tthhee fgarlaspehin tfoo irnmdaictiaoten tdheet edcitrieocntiodna toa f sientfso,rimncaltuiodnin flgocw f. oTrhtuhse sdeatt tiangse tCof=t{hce ,ecv ,e..n.,tci ,}m
+|     |     |     |     |     |     | (cid:110) |      | i     |           | (cid:111) | 1 2 | m   |
+| --- | --- | --- | --- | --- | --- | --------- | ---- | ----- | --------- | --------- | --- | --- |
+|     |     |     |     |     |     |           | (1 ) | ( 2 ) | ( n − 1 ) |           |     |     |
+foforr ththee faculsme iunlfaotirvmeastuiomn odfeetevcetniotsn. dc at=a sert s,,w in c l,uwd i n g. ..c, w f o ri  t h e, Gd ata, wsehte orfe tnh ei sevtheentt oita, l
+|     |     |     |     |     | i   | i   | i   | i i | i i |     | i   |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+mnu fmorb ethreo fcupmosutslaftoivree vseunmt io,fr erveepnrtess.e ncts=t{hre,wso (1 ),rwce (2) p..o.,swt, (n −1()j, ) G∈}V, w(jh=ere1 ,2n,. .is. ,tnhe− to1t)ails
+|     |     |     |     | i   |     | i   | i i u | i i | wi i | i   |     | i   |
+| --- | --- | --- | --- | --- | --- | --- | ----- | --- | ---- | --- | --- | --- |
+|     |     |     |     |     |     |     |       |     | i    |     | i   |     |
+ntuhmejb-ethr oref lpaotesdtsr feosrp eovnesnetp ois, tsr,a nrdepGreis = ( tVs it,hEei ,sAoui ) rcoen pboeshta, lfwo(fj)th∈eVpr(ojp=ag1a,t2io,.n..,gnrap−h1)o f
+en
+|     |     |     |     |     | i   |     |     |     | i   | i   |     | i   |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+eventi. TheundirectedgraphG = (V,E,A )isconstructedaccordingtothecommentor
+is   t h e   j  - th   r e l a te d  r e sp o ns e   p oi s t s,  a in di  G i= (cid:110)(V , E , A )    o n   b ehal(cid:111)f o f  t h e   p r o p ag a t io n
+|     |     |     |     |     |     |     | i   | i ii i |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | ------ | --- | --- | --- | --- |
+r e t w e et r e la t i o n s h ip i n th e e v e n t , w h e re V = r , w , w i . .. , w i re p r e s e n t s th e s e t o f
+g ra p h   o f   e v e n t   i .   T h e   u n d i r e c te d   g r a p h   G i = ( V ,i E , 1 A ) 2  i s   c o n ns t− r u 1 c t e d   a c c o r d i n g  t o   t h e
+|     |     |     |     |                      |     |     | i i       | i i | i   |     |     |     |
+| --- | --- | --- | --- | -------------------- | --- | --- | --------- | --- | --- | --- | --- | --- |
+|     |     |     |     | = (cid:8) i (cid:12) | =   |     | − (cid:9) |     |     |     |     |     |
+n o d e s i n t h e g ra p h , E li e s ht (cid:12) s , t 0 , . . . , n i,  1 i n d i c = a t e s t hi e s ie t o f ir e s p o n s e b e h a v i o rs
+c o m m e n t   o r   r e t w e e t  r e a t io n s i p   i n   th e   e v e n t w h e r e   V { r , w , w . .. , w }   r e p r e s e n t s   t h e
+in the process of information propagation, and the i adja i cen 1 cy 2 matr nii − x 1 A ∈ {0,1}ni ×ni
+i
+set of nodes in the graph,  E ={ei |s,t =0,...,n −1} indicates the set of response behaviors
+represents the response reilationstship of eveni t propagation in the propagation graph G,
+|     |     |     |     |     |     |     |     |     |     | ∈{0,1}ni | ×ni |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | -------- | --- | --- |
+inw thhiceh pirsodceesfisn oefd inasfoErqmuaattiioonn p(1ro).pagation, and the adjacency matrix  A  repre-
+i
+sents the response relationship of event propagation in the propagation graph G, which
+(cid:40)
+|     |                              |     |     |     |     |     | 1,ei | ∈ E |     |     |     |     |
+| --- | ---------------------------- | --- | --- | --- | --- | --- | ---- | --- | --- | --- | --- | --- |
+|     | is defined as Equation (1).  |     |     |     | Ai  | =   | st   | i   |     |     |     |     |
+|     |                              |     |     |     | st  |     |      | ,   |     |     |     | (1) |
+0,other
+|     |     |     |     |     |     |       | 1,ei ∈E |     |     |     |     |      |
+| --- | --- | --- | --- | --- | --- | ----- | -------- | --- | --- | --- | --- | ---- |
+|     |     |     |     |     |     | Ai = | st       | i,  |     |     |     | (1)  |
+st
+Based on inter-node relationships , we0c,oonthsetrruct three distinct propagation graph
+structures with differentiated characteristics. First, the Undirected Graph (UD-Graph)
+Based on inter-node relationships, we construct three distinct propagation graph
+employsbinaryrelationshipstorepresentnodeconnectivity,preservingadjacencyrelation-
+structures with differentiated characteristics. First, the Undirected Graph (UD-Graph) em-
+shipswhiledisregardinginteractiondirectionality. Second,theTop-DownPropagation
+ploys binary relationships to represent node connectivity, preserving adjacency relation-
+Graph(TD-Graph)adherestohierarchicalinformationflowpatterns,wheredirectional
+ships while disregarding interaction directionality. Second, the Top-Down P(j)ropagation
+edges from parent posts (source posts r) to child posts (response posts w ) explicitly
+i l information flow patterns, wherei directional
+Graph (TD-Graph) adheres to hierarchica
+delineatethetree-likediffusionpathwaysofinformationdissemination. Incontrast,the
+edges from parent posts (source posts  r ) to child posts (response posts  w(j)) explicitly
+Bottom-UpPropagationGraph(BU-Grapi h)establishesreverseedgeconfiguirations(child-
+delineate the tree-like diffusion pathways of information dissemination. In contrast, the Bot-
+to-parentorientation)toforminformationconvergencenetworks,atopologicaldesignthat
+tom-Up Propagation Graph (BU-Graph) establishes reverse edge configurations (child-to-
+systematicallycaptureshowdiverseinformationsourcesaggregatetowardspecificnodes.
+AscanbeseenfromFigure2,weconstructthetop-downpropagationgraphstructure
+|     | GTD | =<V,ETD | >andabottom-updiffusiongraphstructureGBU |     |     |     |     |     | =<V,EBU |     |     |     |
+| --- | --- | ------- | ---------------------------------------- | --- | --- | --- | --- | --- | ------- | --- | --- | --- |
+>forgraph
+|     | i   | i   | i   |     |     |     |     |     | i   | i   | i   |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|     |     |     |     |     | ATD | ABU |     |     |     |     |     |     |
+G, i and use adjacency matrices and to represent the connection relationship of
+|     |     |     |     |     | i   |     | i   |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+Appl. Sci. 2025, 15, x FOR PEER REVIEW  7 of 22
+
+parent orientation) to form information convergence networks, a topological design that
+systematically captures how diverse information sources aggregate toward specific nodes.
+As can be seen from Figure 2, we construct the top-down propagation graph struc-
+Appl.Sci.2025,15,3457
+ture  GTD =<V,ETD >  and a bottom-up diffusion graph structure  GBU =<V,EBU >7o  ff2o1r
+| i   | i i |     |     |     |     |     | i i | i   |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+graph  G, and use adjacency matrices  ATD and  ABU  to represent the connection rela-
+|     | i   |     |     |     | i   | i   |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+tionship of nodes on the graph, respectively. In this paper, the semantic feature expression
+nodesonthegraph,respectively.Inthispaper,thesemanticfeatureexpressionobtainedby
+obtained by processing the original post and the response text content by BERT pre-train-
+processingtheoriginalpostandtheresponsetextcontentbyBERTpre-trainingmodelisused
+ing model is used as the feature vector of the post, i.e., the initial feature matrix of the
+asthefeaturevectorofthepost,i.e.,theinitialfeaturematrixofthepropagationstructure
+a p n r d op th a e ga d t i i f o fu n  sion s s tr tr u u c c t t u u r r e e   are a t n h d e   sam th e. e  XTDd=iffu X sBioUn=  [x s t , r x u c , t . u .. r , e x   a]r∈e Rni t×hde ,   whe s r a e m n e .
+|       |       |     |         |     |     |     | 0 1 n−1 | i   |
+| ----- | ----- | --- | ------- | --- | --- | --- | ------- | --- |
+| T D = | B U = | p]∈ | nif × d |     |     |     |         |     |
+reXp r es enXt s th e[nx u,mx ,b..e.,rxo n−f osts o r, ewvheenrtei ,an n dredpirsetsheentdsi mtheen nsuiomnableitry oof fptohsetsf efaotru erevesnpta cie.,
+|     | 0 1 | 1   |     |     | i   |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+nd∈ Rdd dise nthoete dsitmheenfesaiotunraelitvye cotfo trhoef ftehaetuorreig sipnaaclep.o sxt en∈oRteds( tjhe= fe1a,t2u,r.e. .v,enc
+| xa  |     |     |     |     |     | ,∈whidle dx |     | to−r 1o)f  |
+| --- | --- | --- | --- | --- | --- | ------------ | --- | ---------- |
+| 0   |     |     |     |     |     | 0            | j   | i          |
+rtehper eosreingtisnathl epfoesatt,u wrehvileec toxro∈fthde(rje=sp1,o2n,.s.e.,npo−st1.)T hreepardejsaecnetnsc ythme afetraitcuesrea rveetcrtaonrs opfo sthiteio rnes-
+|     |     |     | j      |     | i   |     |     |     |
+| --- | --- | --- | ------ | --- | --- | --- | --- | --- |
+|     | TD  | = ( | B U) T |     |     |     |     |     |
+o s f p e o a n c s h e  o p t o h s e t r . ,  T i.e h . e ,   A adi jac en c A yi  m a tr . ices are transpositions of each other, i.e.,  ATD =(ABU)T .
+i i
+
+FFiigguurree 22.. IInnffoorrmmaattiioonn eevveenntt pprrooppaaggaattiioonn ddiiaaggrraamm..
+33..11..22.. EExxttrraaccttiioonn ooff SSttrruuccttuurraall FFeeaattuurreess ooff IInnffoorrmmaattiioonnP Prrooppaaggaattiioonn
+GGiivveenn tthhee eexxtteennssiivvee nnooddee ccoouunntt wwiitthhiinn tthhee pprrooppaaggaattiioonn ggrraapphh G , , tthhee DDrrooppEEddggee
+Gi
+i
+techniqueisemployedduringmodeltrainingtorandomlyeliminateedgesintheoriginal
+technique is employed during model training to randomly eliminate edges in the original
+graph. Thisapproachaimstocircumventover-fittingandmitigateinformationlossdue
+graph. This approach aims to circumvent over-fitting and mitigate information loss due
+toexcessivesmoothing. IntheDropEdgealgorithm,wefirstrandomlysampleasubset
+to excessive smoothing. In the DropEdge algorithm, we first randomly sample a subset
+E fromtheedgesetE,withasizeof⌊p·|E|⌋. Subsequently,wegenerateamaskmatrix
+Ed r o p   fr o m   t h e   e d ge   s e ti  E ,  w it h  a   si z e  o f    i p E  .  S u b s e q u e n t ly ,  w e   ge n er at e  a   m a s k
+| d r∈ o p{ | }n × n |     | ii  |     |   | aiti  |     |     |
+| --------- | ------ | --- | --- | --- | --- | ------ | --- | --- |
+M 0 , 1 i i , w h e r e M s de fi n e d b y t h e E q u o n ( 2) . F i n a l ly , w e u s e th e H a d a m a r d
+ij
+m a tr ix   M⊙) ∈ { 0 ,1} nid ×n iif ,  w h er e   M   is  d e fi n e d  by  t h e  E q u at i on  (′2=). F in⊙al ly,  we use the Hada-
+| p ro d u c t( | t o m o | y th e a | d ja ceijn | c y m a | t r ix A ,r e | s u lt in g | i n A A M . |     |
+| ------------- | ------- | -------- | ---------- | ------- | ------------- | ----------- | ----------- | --- |
+mard product () to modify the adjacency matrix  A, resulting in  A′= AM .
+(cid:40)
+|     |     |     |     |     | 0,e ∈      | E       |     |     |
+| --- | --- | --- | --- | --- | ---------- | ------- | --- | --- |
+|     |     |     |     | M = | 0 i , j e | ∈E drop |     | (2) |
+ij
+|     |     |     |     | M   | =1, oijthersdrop |        |     | (2)  |
+| --- | --- | --- | --- | --- | ----------------- | ------ | --- | ---- |
+|     |     |     |     |     | ij 1,            | others |     |      |
+AsshowninFigure3,inthispaper,thebidirectionalGraphConvolutionalNetwork
+As shown in Figure 3, in this paper, the bidirectional Graph Convolutional Network
+(GCN)isusedasafeatureextractortoextractthepropagationstructurefeaturesofinfor-
+(GCN) is used as a feature extractor to extract the propagation structure features of infor-
+mation. Sincetheoriginalpostcontainsthemostabundantinformation,inthecalculation
+mation. Since the original post contains the most abundant information, in the calculation
+processthecharacteristicsofeachnodearecombinedwiththecharacteristicsofitsroot
+process the characteristics of each node are combined with the characteristics of its root
+nodetostrengthentheinformationcontentofthesourcepost. Theprocedureforextracting
+node to strengthen the information content of the source post. The procedure for extract-
+propagationcharacteristicsisillustratedbyEquations(3)–(6):
+ing propagation characteristics is illustrated by Equations (3)–(6):
+|     |     |     |            |          | − 1                     | − 1          |      |         |
+| --- | --- | --- | ---------- | -------- | ----------------------- | ------------ | ---- | ------- |
+|     |     |     | H TD       | = σ      | (Dˆ 2ˆ A−(cid:101)1 T D | Dˆ − 2 1 X   | W )  | ((33))  |
+|     |     |     | 1          | H TD =   | σ (D 2 A TD            | Dˆ 2 XW      | 0)   |         |
+|     |     |     |            | 1        |                         |              | 0    |         |
+|     |     |     | H(cid:101) | TD =     | c o n c a t (H TD       | ,X           | )    | ( 4 )   |
+|     |     |     |            | 1        | 1                       | root         |      |         |
+|     |     |     |            | H TD    | = c o n c a t(H         | TD ,X        | )    | ( 4 )   |
+|     |     |     |            | 1        |                         | 1 root       |      |         |
+|     |     |     | TD         | = σ(Dˆ−1 | TDDˆ−                   | 1 TDW        | )    |         |
+|     |     |     | H 2        |          | 2A(cid:101)             | 2 H(cid:101) | 1    | (5)     |
+1
+|     |     |     | HTD | concat(HTD,Hroot) |     |     |     |     |
+| --- | --- | --- | --- | ----------------- | --- | --- | --- | --- |
+|     |     |     |     | =                 |     |     |     | (6) |
+|     |     |     |     |                   | 2   | 1TD |     |     |
+whereDˆ isthedegreematrixcorrespondingtothepropagationgraph, A(cid:101)= ATD+I ,W ,
+N 0
+andarealllearnableparameters,andtheobtainedHTD
+| W 1 |     |     |     |     |     |     | isthetop-downpropagation |     |
+| --- | --- | --- | --- | --- | --- | --- | ------------------------ | --- |
+characteristicsoffalseinformation. Similarly,thebottom-uppropagationcharacteristics
+
+Appl.Sci.2025,15,3457 8of21
+HBU canbeobtained,andtherepresentationvectorh ∈ R1×dp ofinformationpropagation
+p
+characteristicscanalsobeobtainedbyaveragepoolingaftersplicingthetwo. Thepooling
+processisshowninEquation(7).
+h = Meanpool(concat(HTD,HBU)) (7)
+p
+Figure3.Extractionofpropagationfeatures.
+3.2. InformationContentFeatureRepresentation
+Boththeoriginalandpropagatedtextcontentoffalseinformationcontaincriticalse-
+manticcues,andleveragingtheirsemanticfeaturescomprehensivelycanenhancedetection
+performance. GiventhatBERTcapturesbidirectionalcontext-awaresemanticrepresen-
+tationstoderivericherlatentfeatures,thisstudyutilizesthepre-trainedBERTmodelto
+generatecontextualsemanticembeddingsfromtextualcontent,asillustratedinFigure4.
+Theinputtothepre-trainedBERTconsistsofwordembeddings(tokenembeddings),
+sentenceembeddings(segmentembeddings),andpositionembeddings(positingembed-
+dings).ThetextinformationoflengthnisobtainedW = {[CLS],token ,token ,...,token }
+1 2 n
+afterwordsegmentation,where[CLS]representsthetokenflagusedforsubsequentclassifi-
+cationandtoken representsthei-thwordinW. TheWisinputintothreeembeddinglayers
+i
+toobtainwordvectorE ,textvectorE andpositionvectorE ,respectively,
+token segment postion
+(cid:110) (cid:111)
+andthethreearesuperimposedtoobtainanewvectorE = E ,E ,E ,...,E . The
+[CLS] 1 2 n
+obtainedvectorEisusedastheinputforthemodel.
+The overall architecture of BERT is composed of multiple stacked Transformer en-
+coders. Eachencoderlayercontainsamulti-headattentionmechanismandafeedforward
+neuralnetwork. Throughthemulti-headattentionmechanismoftheencoder,thereisa
+mutualattentionedgebetweentheencodedexpression(Trm)ofeachtoken,whichcan
+i
+achievethesamedegreeofattentionbetweenwordswithdifferentdistances. BERTinter-
+nallystackssixencoderswiththesamestructureinseriestobetterlearnthecontextual
+semanticinformationoftheinputtext.Amongthem,multi-headattentioncanbeexpressed
+asEquations(8)and(9):
+MultiHead(Q,K,V) =Concat(head ,head ,...,head )ω (8)
+1 2 n
+head = Attention(Qω Q ,KωK,VωV) (9)
+i i i i
+
+Appl.Sci.2025,15,3457 9of21
+where: nisthenumberofheadsofthemulti-headattentionmechanism;head istheoutput
+i
+ofthei-thhead;andQ,K,Vareobtainedbylineartransformationoftheinputfeaturematrix.
+ωQ,ωK,ωV aretheparametermatricesofQ,KandVlearnedaftertraining,respectively.
+Finally, thefeaturevectorlearnedfromtheclassificationlabel [CLS] isfedintothe
+fullyconnectedfeedforwardneuralnetworklayertoobtainthesemanticexpressionSof
+theinformationtext.
+Figure4.Extractionprocessforinformationcontentfeatures.
+3.3. ClassificationofFalseInformation
+After obtaining the semantic features (S) of the original text and the propagation
+structurefeatures(h )enhancedbytherootnode,thesefeaturesareconcatenatedtoobtain
+p
+thefusionfeature. TheprocessisshowninEquation(10):
+F =Concate(h ,S) (10)
+p
+Ultimately,theamalgamatedfeaturesarefedintoafullyconnectedneurallayerfollowedby
+asoftmaxlayertodiscerntheeventlabels,withmodelrefinementachievedthroughminimizing
+thecross-entropylossfunction.TheprocessisshowninEquations(11)and(12):
+yˆ = softmax(W F+b ) (11)
+c c
+C
+∑
+Loss = − y logyˆ (12)
+i i
+i=1
+
+Appl.Sci.2025,15,3457
+10of21
+∈R1×C
+whereyˆ istheprobabilityvectorofallclassespredictingtheeventlabel,y ∈ {0,1}
+i
+is the true label value, C is the number of classification classes, and bothW c and b c are
+parametersthatcanbelearnedthroughtraining.
+4. Experiments
+4.1. Datasets
+To effectively evaluate the performance of the model, we conducted experiments
+onfourpubliclyavailabledatasets: Twitter15,Twitter16,Pheme,andSemEval-17-task8.
+Twitter15andTwitter16,crawledandcollatedfromtheTwitterplatformbyMaetal.[38],
+contain1490and818rumor-relatedevents,respectively.
+Eacheventislabeledbasedontheauthenticityannotationsfromrumorverification
+websites,categorizedintofourclasses: Non-rumors(NRs),verifiedFalserumors(FRs),
+verifiedTruerumors(TRs),andUnverifiedrumors(URs). Pheme[39],abenchmarkdataset
+for rumor detection in social media, comprises 5746 tweets collected during breaking
+newsevents(e.g., Fergusonprotests, CharlieHebdoshooting). Labelscategorizeposts
+intoRumororNon-Rumorbasedonfact-checkingannotations. TheSemEval-17-task8
+dataset [40], a widely adopted benchmark for rumor analysis, contains 325 real-world
+eventswith3854Twitterconversationalthreads. Itfocusesonfine-grainedrumorverifi-
+cationwiththreelabels: “Truerumor”(TR),“Falserumor”(FR),and“Unverifiedrumor”
+(UR),whilealsoprovidingstanceclassificationsubtasks(Support,Deny,Query). Inthe
+dataset,nodessignifyindividualposts,edgesdelineateretweetorcommentconnections,
+andnodalcharacteristicsarepre-trainedutilizingBERT.Thesummarizedmetricsofthe
+datasetarepresentedinthefollowingTable1.
+Table1.Statisticsofthedataset.
+|                      | Statistics     | Twitter15 | Twitter16 | Pheme  | SemEval-17 |
+| -------------------- | -------------- | --------- | --------- | ------ | ---------- |
+|                      | Numberofevents | 1490      | 818       | 5473   | 325        |
+|                      | Non-rumor      | 374       | 205       | -      | -          |
+|                      | Falserumors    | 370       | 205       | 3477   | 74         |
+| Unsubstantiatedrumor |                | 374       | 203       | -      | 106        |
+|                      | Truerumor      | 372       | 205       | 1996   | 145        |
+|                      | Numberofusers  | 276,663   | 173,487   | 36,443 | -          |
+| Averagenumberofposts |                | 223       | 251       | 20     | -          |
+| Maximumnumberofposts |                | 1768      | 2765      | 346    | -          |
+| Minimumnumberofposts |                | 55        | 81        | 3      |            |
+4.2. ExperimentSettings
+Toconfirmtheefficacyofthemodelpositedinthispaperforthetaskofdisinformation
+detection,thisstudycontrastsitwithotherfoundationaltechniqueswithintheexperimental
+| framework. | Themethodologicalspecificsareelucidatedasfollows: |     |     |     |     |
+| ---------- | ------------------------------------------------- | --- | --- | --- | --- |
+DTC[41]: Aclassificationmodelbasedondecisiontrees, whichmanuallyextracts
+featurestoobtaininformationcredibilityforfalseinformationdetection.
+SVM-RBF[6]: ThemodelisbasedonasupportvectormachinewithanRBFkernel,
+whichutilizestheaggregatestatisticsofthepostingsfordisinformationdetectionfeatures
+bymanuallyconstructingfeatures.
+GRU [8]: A deep learning model based on RNN that detects false information by
+learningthepropagationsequenceofmessages,i.e.,thetemporalstructurecharacteristics
+ofevents.
+RvNN[42]: Afalseinformationdetectionmethodbasedonatree-structuredrecurrent
+neuralnetworkwithGRUunits.
+
+Appl.Sci.2025,15,3457
+11of21
+PPC_RNN+CNN[43]: ThemodelcombinesRNNandCNNtolearntherepresenta-
+tionofeventsthroughtheuserinformationonthemessagepropagationpath,andthen
+identifiesfalseinformation.
+Bi-GCN[11]: Thisisagraphmodelusingabidirectionalgraphconvolutionalneural
+network. Featuresareextractedfromtop-down(top-down)andbottom-up(bottom-up)
+propagationdirectionsofrumorsfordetection.
+GCN-Bert[44]: Therumordetectionmethodnotonlyconsidersthefeaturesofthe
+messageitself,butalsoutilizestherumorfeaturesofallrelevanttextsandwords.
+HAGNN[45]: Agraphneuralnetwork-baseddisinformationdetectionmodelthat
+captureshigh-levelrepresentationsoftextualcontentatdifferentgranularities,andfuses
+propagationstructuresfordisinformationdetection.
+TheexperimentdetailedinthispaperisexecutedontheUbuntu22.04platform,with
+theexperimentalenvironmentconsistingofPython3.10andPyTorch2.1.0. Table2presents
+theprecisespecificationsoftheexperimentalsetup. Toensureimpartialityincomparison,
+thedatasetwasrandomlypartitionedintofivesegmentsandafive-foldcross-validation
+experimentwasconductedonthesesegments. Duringtraining,theconfigurationswereset
+asfollows: hiddenlayerdimensionto64,iterations(epoch)to200,batchsize(batch_size)
+to128,learningrateto0.0005,anddropoutrateto0.2. TheAdamoptimizationalgorithm
+facilitatedmodelparameterupdates,whiletheearlystoppingtechniquewasimplemented
+to prematurely cease training if the validation set’s loss value remained stagnant for
+10consecutivetrials. Modelefficacywasgaugedusingtheevaluationmetrics: Accuracy
+(Acc)andF1score.
+Table2.Configurationoftheexperimentalenvironment.
+| ExperimentalEnvironment |     |     | ExperimentalSetup |     |     |
+| ----------------------- | --- | --- | ----------------- | --- | --- |
+| OS                      |     |     | Ubuntu22.04       |     |     |
+| Developmentenvironment  |     |     | VScode1.98.2      |     |     |
+Intel(R)Xeon®Silver4116CPU@2.10GHz
+processor
+Graphicscardmodel NVIDIAGeForceRTX3090,RTX(24GB)
+| programminglanguage   |     |     | Python3.10         |     |     |
+| --------------------- | --- | --- | ------------------ | --- | --- |
+| DeepLearningFramework |     |     | Pytorch2.5.1+cu124 |     |     |
+4.3. ResultsandAnalysis
+OnTwitter15andTwitter16datasets,theproposedICP-BGCNmethodisanalyzed
+withsevenbaselinemodelssuchastheclassicalDTC,andtheexperimentalresultsare
+showninTables3and4.
+Table3.ComparativeexperimentalresultsonTwitter15dataset.
+F1
+| Methods     | ACC   |       |       |       |       |
+| ----------- | ----- | ----- | ----- | ----- | ----- |
+|             |       | NR    | FR    | TR    | UR    |
+| DTC         | 0.454 | 0.733 | 0.355 | 0.317 | 0.415 |
+| SVM-RBF     | 0.318 | 0.318 | 0.318 | 0.318 | 0.318 |
+| GRU         | 0.646 | 0.792 | 0.574 | 0.608 | 0.592 |
+| RvNN        | 0.723 | 0.723 | 0.723 | 0.723 | 0.723 |
+| PPC_RNN+CNN | 0.667 | 0.667 | 0.667 | 0.667 | 0.667 |
+| Bi-GCN      | 0.886 | 0.891 | 0.860 | 0.930 | 0.864 |
+| GCN-Bert    | 0.872 | 0.853 | 0.892 | 0.823 | 0.911 |
+| HAGNN       | 0.865 | 0.813 | 0.870 | 0.905 | 0.896 |
+| ICP-BGCN    | 0.897 | 0.904 | 0.959 | 0.850 | 0.869 |
+Boldindicatesoptimalresults.
+
+Appl.Sci.2025,15,3457
+12of21
+Table4.ComparativeexperimentalresultsonTwitter16dataset.
+F1
+| Methods     | ACC   |       |       |       |       |
+| ----------- | ----- | ----- | ----- | ----- | ----- |
+|             |       | NR    | FR    | TR    | UR    |
+| DTC         | 0.465 | 0.643 | 0.393 | 0.419 | 0.403 |
+| SVM-RBF     | 0.553 | 0.553 | 0.553 | 0.553 | 0.553 |
+| GRU         | 0.633 | 0.772 | 0.489 | 0.686 | 0.593 |
+| RvNN        | 0.737 | 0.737 | 0.737 | 0.737 | 0.737 |
+| PPC_RNN+CNN | 0.690 | 0.690 | 0.690 | 0.690 | 0.690 |
+| Bi-GCN      | 0.880 | 0.847 | 0.869 | 0.937 | 0.865 |
+| GCN-Bert    | 0.877 | 0.915 | 0.827 | 0.886 | 0.930 |
+| HAGNN       | 0.874 | 0.815 | 0.809 | 0.880 | 0.865 |
+| ICP-BGCN    | 0.917 | 0.931 | 0.891 | 0.962 | 0.883 |
+Boldindicatesoptimalresults.
+As evidenced by the experimental results in Tables 3 and 4, the ICP-BGCN model
+achievessuperiorclassificationperformancewithaccuraciesof89.7%and91.7%onthe
+Twitter15 and Twitter16 datasets respectively, demonstrating marked superiority over
+baselinemodels. Additionally,itexhibitsexceptionalperformanceacrossprecisionand
+recallmetrics: achievingprecisionandrecallratesof90.9%and89.3%onTwitter15,and
+90.1% and 91.7% on Twitter16. This performance profile confirms its dual capability
+in maintaining classification accuracy while ensuring comprehensive sample coverage.
+Furthermore,ICP-BGCNperformswellontheNR,FR,TRandURcriteriaonbothdatasets.
+Themodelisabletomaintainahighlevelofperformancewhendealingwithdifferent
+categoriesofsamples,achievingmorethan85%onallcriteria. Thecombinedadvantagesof
+themultidimensionalmetricsvalidatetherobustnessandstabilityofthemodelinhandling
+differentcategoriesofrumordetectiontasks.
+Through experiments, it can be found that the detection method based on deep
+learningissuperiortothedetectionmethodbasedonmachinelearning. OntheTwitter15
+dataset,theaccuracyofICP-BGCNis44.3%higherthanthatofDTCand57.9%higherthan
+thatofSVM-RBF.Themainreasonisthatmachinelearningreliesonmanualextraction
+offeatures,whichneedstorelyontheexperienceandjudgmentofworkers,whiledeep
+learning-based models can automatically capture deeper features and the correlation
+betweenfeatures,thusbetteridentifyingfalseinformation.
+Amongthesevendeeplearning-basedmisinformationdetectionmodels,ICP-BGCN,
+HAGNN,GCN-Bert,Bi-GCNutilizegraphneuralnetworkstoextractfalseinformation
+propagationstructurefeatures,anddemonstratebetterperformancethantheotherthree
+models. ThisshowsthatGNNsareeffectivetomodelthepropagationprocessofinforma-
+tionusingpropagationgraphsandextractpropagationstructurefeatures. OurICP-BGCN
+modelfusesthepropagationstructureandthesemanticfeaturesofthemessagetext. Com-
+pared with Bi-GCN, which only considers the structure of information dissemination,
+GCN-Bert,whichutilizestextinformationfeaturesatdifferentgranularities,andHAGNN,
+whichcapturesmulti-levelsemanticinformationoftextcontentandcombinesthestructural
+featuresofdisseminationnetworks,thedetectionaccuraciesontheTwitter15datasetare
+improvedby1.1%,2.5%,and3.2%,respectively. Itisalsobetterthanothermodelsinvari-
+ousindicators,whichshowsthatitisreasonableandeffectivetofullyfusetheoriginaltext
+features,propagationtextfeatures,andpropagationstructurefeaturestoimprovetheaccu-
+racyoffalseinformationdetection. Overall,theICP-BGCNmodeloutperformstheother
+eightmodels,whichincludetraditionalmachinelearninganddeeplearningapproaches,
+intermsofdetectionaccuracyandF1scoreforeachcategorytovaryingextents.
+To comprehensively assess the cross-scenario generalization capability of our pro-
+posedICP-BGCNmodel,weselectthePhemedatasetwithsignificantscenariovariationsas
+
+Appl.Sci.2025,15,3457
+13of21
+ourvalidationbenchmark. Asamisinformationdetectionbenchmarkdatasetinbreaking
+newsscenarios,Phemeencompassesmultiplecrisisdomains,includingsocial,political,
+and health-related events [46], with its cross-domain characteristics providing an ideal
+experimentalenvironmentforevaluatingmodeladaptabilityacrossdifferentscenarios.
+Comparedtoconventionaldatasets,likeTwitter15andTwitter16,Phemeexhibitsthreedis-
+tinctivecharacteristics. Firstly,intermsofdatacomposition,thedatasetcontainshigh-risk
+eventswithheightenedemotionalintensity(e.g.,publichealthcrises,politicalscandals)
+anduserinteractionsexhibitingmorepronouncedemotionalsignals[47],presentingmul-
+tidimensional challenges for semantic modeling. Secondly, the Pheme dataset exhibits
+significantvariationsineventscales,wheremuchoftheinformationlabeledasrumors
+actuallyoriginatesfrommisclassificationsofrealevents[46]. Thislabeldistributioncharac-
+teristicconstitutesarigoroustestofthemodel’sdiscriminativepower. Thirdly,regarding
+datascale,thelimitedrumorsamples(withnon-rumorsconstituting63.5%ofinstances)
+intensifytrainingchallengesunderclassimbalanceconditions[46].
+These characteristics closely align with the complex scenarios of misinformation
+propagationinreal-worldsettings. TovalidateICP-BGCN’sperformanceoncross-scenario
+datasets,wemaintainidenticalparameterconfigurationstothoseusedinTwitter15and
+Twitter16experiments,conductingcomparativeanalyseswithfourbaselinemodels. The
+experimentalresultsforthePhemedatasetareshowninTable5.
+Table5.ComparativeexperimentalresultsonPhemedataset.
+| Methods | Class Accuracy | Precision | Recall | F1    |
+| ------- | -------------- | --------- | ------ | ----- |
+|         | R              | 0.769     | 0.758  | 0.761 |
+GCAN[33] 0.834
+|     | N   | 0.871 | 0.874 | 0.872 |
+| --- | --- | ----- | ----- | ----- |
+|     | R   | 0.753 | 0.734 | 0.741 |
+Bi-GCN[11] 0.824
+|     | N   | 0.861 | 0.872 | 0.865 |
+| --- | --- | ----- | ----- | ----- |
+|     | R   | 0.523 | 0.722 | 0.599 |
+GACL-CADA[48] 0.808
+|     | N   | 0.921 | 0.831 | 0.872 |
+| --- | --- | ----- | ----- | ----- |
+|     | R   | 0.765 | 0.760 | 0.760 |
+GAN[49] 0.823
+|     | N   | 0.858 | 0.858 | 0.857 |
+| --- | --- | ----- | ----- | ----- |
+|     | R   | 0.770 | 0.794 | 0.775 |
+ICP-BGCN 0.844
+|     | N   | 0.889 | 0.870 | 0.775 |
+| --- | --- | ----- | ----- | ----- |
+Thefourbaselinemodelsemploydistincttechnicalapproaches. GCAN[33]utilizes
+graphneuralnetworkswithdualco-attentionmechanismstoachievemultimodaldynamic
+featurefusionacrosssourcetext,userattributes,andpropagationpathways. Bi-GCN[11]
+leveragesbidirectionalgraphconvolutionalnetworkstoconcurrentlymodelforwarddiffu-
+sion(source-to-retweeters)andreversetraceability(leaf-to-source)patternsininformation
+dissemination.GACL-CADA[48]implementsaclass-awareadversarialdomainadaptation
+frameworktoaddresscross-domaindistributionalignmentbetweenhistoricaldataand
+emergingevents. GAN[49]enhancesdetectionrobustnessforhybridtrue/falsecontent
+throughadversarialsamplegeneration(e.g.,semanticallyambiguoustextvariants)coupled
+withdiscriminator-baseddecisionboundaryoptimization.
+ExperimentalresultsdemonstratethatICP-BGCNachievesanaccuracyof84.4%,repre-
+sentinga1%improvementoverthebestbaselinemodel(GCAN:83.4%),whilealsodelivering
+competitiveperformanceinprecision,recall,andF1-score. Thisfindingillustratesthatthe
+modelnotonlyeffectivelyidentifiesroutinerumorpatternsinTwitter15andTwitter16datasets
+butalsoexhibitsrobustperformanceinhandlingPheme’shigh-emotion,semanticallyambigu-
+ouscrisis-relatedmisinformation. Thiscross-domainadaptabilityhighlightsitsrobustness
+andpotentialforgeneralizationacrossdiversepropagationscenarios.
+
+Appl.Sci.2025,15,3457 14of21
+Tofurtherensuretheaccuracyofourresultsandassessthegeneralizationcapability
+ofourproposedICP-BGCNmodel,weincorporatetheSemEval-17-task8datasetasan
+additionalbenchmarkinourexperiments.TheSemEval-17-task8datasetiswidelyadopted
+for rumor analysis and provides a rich set of Twitter conversational threads with fine-
+grainedlabels—“Truerumor”(TR),“Falserumor”(FR),and“Unverifiedrumor”(UR)—as
+well as stance classification tasks. The experimental results are shown in Table 6. The
+technicalspecificationsofthefourbaselinemodelsareasfollows.
+Table6.ComparativeexperimentalresultsonSemEval-17dataset.
+Methods Accuracy Macro-F1
+HiTPLAN[10] 0.571 0.581
+MTL2-hierarchicaltransformer[50] 0.643 0.657
+Coupledhierarchicaltransformer[50] 0.678 0.680
+HCD-MGN[51] 0.767 0.754
+ICP-BGCN 0.785 0.792
+HiTPLAN[10]employsamulti-levelTransformerarchitecturetocapturenuancedcontex-
+tualrepresentationsfromsocialmediapostsfordeceptivecontentdetection.MTL2-Hierarchical
+Transformerhierarchically[50]segmentsconversationalthreadsintosub-threads, encodes
+contextualfeaturesusingBERTembeddings,andaggregatescross-sub-threadsemanticsvia
+Transformerfusiontoenablemulti-granularrepresentationlearning. CoupledHierarchical
+TransformerextendsMTL2[50]byintegratingmulti-tasklearningthroughahybridattention
+mechanismthatalignsBERT-derivedsemanticswithstance-awarepropagationpatterns,jointly
+optimizingrumorverificationandstancedetection. HierarchicalContrastiveDisentangled
+Multi-taskGraphNetwork(HCD-MGN)[51]enhancesmulti-taskperformancethrough(1)a
+featuredecouplingmodule(PFN)separatingshared/task-specificfeatures, (2)dualgraph
+encodersmodelingpropagationstructuresandsemanticrelationships,and(3)stance-aware
+contrastivelearningforrepresentationoptimization.
+On the SemEval-17 Task 8 dataset, the proposed ICP-BGCN model achieves state-
+of-the-artperformancewith78.5%accuracyand79.2%Macro-F1score,demonstratinga
+1.8%absoluteperformanceimprovementoverthebestbaselinemodelHCD-MGN(76.7%
+accuracy). Theseresults,togetherwiththoseobtainedfromtheTwitter15,Twitter16,and
+Phemedatasets,confirmthatourmodelconsistentlygeneralizesacrossmultiplesocialdata
+sources,effectivelycapturingtheuniquepropagationstructuresinherentindifferentsocial
+mediascenarios.
+4.4. AblationStudy
+TovalidatethefunctionalityofindividualcomponentswithintheICP-BGCNmodel,
+thispaperdevisesthreedistinctablationstudiesasfollows:
+(1) w/oBiPS:Thebidirectionalpropagationgraphmoduleisremoved. Anundirected
+propagationgraphisusedtorepresentthepropagationpath,whichonlyconsiders
+thestructureofeventpropagationanddoesnotconsideritsdirection.
+(2) w/o Ps: Removed the information propagation graph. Without considering the
+influence of tweet propagation structure on detection, only the content semantic
+featuresofsourcetweetsandresponsepostsareusedforfalseinformationdetection.
+(3) w/o Text: Removed textual semantic information. The semantic features of the
+sourcetweetandtheresponsepostwereremoved,andthemodelonlycontainedthe
+bidirectionalgraphstructureofthepropagationrelationship.
+TheexperimentalresultsareshowninTables7and8. Analyzingthese,itcanbefound
+thateachmoduleplaysauniquerole,andremovingorreplacinganyofthecomponentswill
+
+Appl.Sci.2025,15,3457
+15of21
+affecttheoverallperformanceoftheICP-BGCNmethod. Whentheundirectedpropagation
+graphisusedtoreplacethebidirectionalpropagationgraphmodel,theaccuracyofthe
+model on the two datasets is decreased by 2.8% and 2.8%, respectively, indicating that
+thetopologystructurecombiningpropagationanddiffusioncanmoreeffectivelycapture
+andmodelthepropagationcharacteristicsofeventsandenhancetheeventdetectionrate.
+Furthermore,onlyconsideringthepropagationstructureorrelyingonsemanticinformation
+aloneforfalseinformationdetectionwillleadtoasignificantdecreaseintheaccuracyof
+themodel,whichindicatesthatthepropagationstructureandsemanticinformationhave
+significanteffectsonfalseinformationdetectionrespectively. Concurrently,theintegration
+ofbothelementssignificantlyenhancestheprecisionofdisinformationdetection.
+Table7.ComparisonofablationexperimentalresultsonTwitter15dataset.
+F1
+| Methods  | ACC   |       |       |       |       |
+| -------- | ----- | ----- | ----- | ----- | ----- |
+|          |       | NR    | FR    | TR    | UR    |
+| w/oBi-Ps | 0.869 | 0.821 | 0.945 | 0.857 | 0.833 |
+| w/oPs    | 0.838 | 0.830 | 0.941 | 0.777 | 0.751 |
+| w/oText  | 0.842 | 0.735 | 0.653 | 0.956 | 0.764 |
+| ICP-BGCN | 0.897 | 0.904 | 0.959 | 0.850 | 0.869 |
+Table8.ComparisonofablationexperimentalresultsonTwitter16dataset.
+F1
+| Methods  | ACC   |       |       |       |       |
+| -------- | ----- | ----- | ----- | ----- | ----- |
+|          |       | NR    | FR    | TR    | UR    |
+| w/oBi-Ps | 0.889 | 0.769 | 0.671 | 0.957 | 0.903 |
+| w/oPs    | 0.855 | 0.802 | 0.867 | 0.944 | 0.477 |
+| w/oText  | 0.843 | 0.791 | 0.665 | 0.933 | 0.805 |
+| ICP-BGCN | 0.917 | 0.931 | 0.891 | 0.962 | 0.883 |
+4.5. PropagationGraphAnalysis
+Inordertoexploretheimpactofpropagationpathsondisinformationdetection,we
+statisticallyanalyzethestructureofthepropagationnetworksofdisinformationandnon-
+disinformation,aimingtorevealthedifferencesinpropagationpatternsbetweenthetwo.
+WeintegratedthelabelsoftheTwitter15andTwitter16datasets,classified“verifiedtrue
+rumors(TR)”,“verifiedfalserumors(FR)”,and“unverifiedrumors(UR)”intothecategory
+of“rumors”,andcomparedthemwiththedataof“Non-rumors(NR)”. Thevisualization
+ofinformationdisseminationisshowninFigure5below. Inaninformationdissemination
+relationshipgraph,eachnoderepresentsaseparateunitofinformation,whichincludes
+theoriginaltweet,itsrelatedcomments,orretweets. Thesenodesareconnectedbyedges,
+whichrepresentinteractivebehaviorsbetweenthem,suchasretweetsorcomments. We
+define the original tweet as the root node of the relationship graph, and all posts that
+directlyreplytothattweetbecomeitschildren. Followingthislogic,ifapost−ireceives
+areplyfromanotherpost−j,thenaccordingtotheorderofinformationdissemination,
+post−jbecomesachildnodeofpost−i,whichisrepresentedinthegraphasnode−jisa
+subordinatenodeofnode−i.
+As shown in Figure 5, the information dissemination tree exhibits a broad structure
+inwhichmostnodesbelongtotheshallowfirst-levelresponses[52]. Inthedisinformation
+disseminationnetwork,thereareobviousclustersofnodes,andthenodeswithintheclusterare
+moredenselyconnected,whilethenodesconnectedtonodesoutsidetheclusterarerelatively
+sparse, which reflects the high degree of aggregation in the disinformation dissemination
+network.Thisdiscrepancymaybeexplainedbythefactthatwell-craftedrumorsusuallycarry
+
+Appl. Sci. 2025, 15, x FOR PEER REVIEW 16 of 22
+Appl.Sci.2025,15,3457 16of21
+graph, and all posts that directly reply to that tweet become its children. Following this
+inherentinformationcontentfeaturesthatcantriggertherepliesandrepostsofmultipleinternet
+logic, if a post −i receives a reply from another post −j, then according to the order of
+celebrityindividualswithhighsocialinfluence. Incontrast,naturallyoccurringtrueevents
+information dissemination, post −j becomes a child node of post −i , which is
+arenotwellcraftedtomaximizetheirsocialimpact,makingitnon-trivialtotriggerrepostsor
+represented in the graph as node −j is a subordinate node of node −i.
+repliesofmultipleinternetcelebrityindividualssimultaneously.
+(a) Twitter15 Non-rumor (b) Twitter15 Rumor
+(c) Twitter16 Non-rumor (d) Twitter16 Rumor
+FFigiguurere 5.5 C. oCmopmapriasroinso onf ionffoinrmfoarmtioanti odnissdeimssienmatiinoant inoentwnoetrwk odrikagdraiamgsr.a (ma,sc.) r(eap,cr)esreenptr ethseen dtitshseemdii-s-
+seminationnetworksoftypicalnon-disinformationeventsinthetwodatasets,respectively; and
+nation networks of typical non-disinformation events in the two datasets, respectively; and (b,d)
+(b,d)representthedisseminationmapsoftypicaldisinformationinthetwodatasets,respectively.
+represent the dissemination maps of typical disinformation in the two datasets, respectively.
+Inaddition,thestructureofthedisinformationdisseminationnetworkismorecom-
+As shown in Figure 5, the information dissemination tree exhibits a broad structure
+plex, the dissemination path is usually longer, and the connections between nodes are
+in which most nodes belong to the shallow first-level responses [52]. In the disinformation
+closer,whichsuggeststhattherumorinformationnotonlyspreadsquicklyintheprocess
+dissemination network, there are obvious clusters of nodes, and the nodes within the cluster
+ofdisseminationbutalsogetsstrengthenedandconsolidatedinspecificgroups. Incon-
+are more densely connected, while the nodes connected to nodes outside the cluster are rel-
+trast, aloweraggregationtrendispresentedinthedisseminationnetworkofnon-false
+atively sparse, which reflects the high degree of aggregation in the disinformation dissemi-
+information. Itspathdistributionismoreuniformandtheconnectionbetweennodesis
+nation network. This discrepancy may be explained by the fact that well-crafted rumors
+sparse,allthesefeaturesindicatingthatthebreadthofinformationdisseminationislimited
+usually carry inherent information content features that can trigger the replies and reposts
+anddecentralized.
+of multiple internet celebrity individuals with high social influence. In contrast, naturally
+Further,wecomputedandcomparedthetopologicalmetricsoftheinformationdis-
+occurring true events are not well crafted to maximize their social impact, making it non-
+seminationgraphs,suchasthenumberofnodes,numberofedges,averagepathlength,
+trivial to trigger reposts or replies of multiple internet celebrity individuals simultaneously.
+degreedistribution,etc. Weusedtheaveragevaluesofthemetricsforallgraphsinboth
+In addition, the structure of the disinformation dissemination network is more com-
+categories,non-spuriousinformationandspuriousinformation,asthefinalcomparison
+plex, the dissemination path is usually longer, and the connections between nodes are
+
+Appl. Sci. 2025, 15, x FOR PEER REVIEW 17 of 22
+closer, which suggests that the rumor information not only spreads quickly in the process
+of dissemination but also gets strengthened and consolidated in specific groups. In con-
+trast, a lower aggregation trend is presented in the dissemination network of non-false
+information. Its path distribution is more uniform and the connection between nodes is
+sparse, all these features indicating that the breadth of information dissemination is lim-
+ited and decentralized.
+Further, we computed and compared the topological metrics of the information dis-
+Appl.Sci.2025,15,3457 semination graphs, such as the number of nodes, number of edges, average path len 17 g o th f2 , 1
+degree distribution, etc. We used the average values of the metrics for all graphs in both
+categories, non-spurious information and spurious information, as the final comparison
+ddaatata. .TThhe ecacalcluculalatitoionn rerseusultlst soof fththe enneetwtwoorkrk stsrtuructcuturer emmetertircisc saarer eddeteatailielded inin TTaabblele 99; ;sseeee
+FFigiguurree 66 foforr ththee vvisisuuaalilzizaatitoionn ooff tthhee ddeeggrreeee ddiissttrriibbuuttiioonn. .
+T T a a b b l l e e 9 9 . .CCaalclcuulalatteedd nneettwwoorrkk mmeettrricicss ffoorr ddaattaasseettss. .
+TTwwiitttteerr1155 TTwwiitttteerr1166
+IInnddiiccaattoorrss
+NNoonn--RRuummoorr RRuummoorr NNoonn-R-Ruummoor r RRumumoro r
+No6es 52.786 51.369 43.458 50.829
+Nodes 52.786 51.369 43.458 50.829
+EEddggeess 110033..557722 110000..773388 8844.9.91155 999.96.5675 7
+DDiiaammeetteerr 66..887755 66.8.83388 66.5.59922 7.70.8018 1
+AAvveerraaggee PPaatthh LLeennggtthh 22..667766 22.7.71155 22.6.61122 2.27.9719 1
+AAssssoorrttaattiivviittyy − −00..774400 − − 00.7.76633 − − 0.07.4734 3 − − 0.704.784 8
+Density 0.114 0.113 0.154 0.127
+Density 0.114 0.113 0.154 0.127
+FFigiguurere 66. .PPlolot toof fththee ddeeggrereee ddisitsrtirbibuutitoionn oof fththee ddaatatasseet.t .
+In the network metrics calculation results shown in Table 9, the results of the two
+In the network metrics calculation results shown in Table 9, the results of the two
+datasets show opposite trends. Specifically, in the Twitter15 dataset, network metrics
+datasets show opposite trends. Specifically, in the Twitter15 dataset, network metrics such
+suchasthenumberofnodesandthenumberofedgespresenthighervaluesinthenon-
+as the number of nodes and the number of edges present higher values in the non-rumor
+rumor category; however, in the Twitter16 dataset, the values of these same network
+category; however, in the Twitter16 dataset, the values of these same network metrics in
+metricsintherumorcategoryexceedthoseinthenon-rumorcategory. Accordingtothe
+the rumor category exceed those in the non-rumor category. According to the relevant
+relevantliteraturediscussion,falseinformationspreadsfarther,faster,deeper,andwider
+literature discussion, false information spreads farther, faster, deeper, and wider in terms
+intermsofspeed,scope,depth,andbreadthcomparedtonon-falseinformation[3,53,54].
+of speed, scope, depth, and breadth compared to non-false information [3,53,54]. In addi-
+In addition, the experimental results in Section 4.3 show that disinformation detection
+tion, the experimental results in Section 4.3 show that disinformation detection based on
+basedonpropagationpathsperformssignificantlybetterintheTwitter16datasetthanin
+propagation paths performs significantly better in the Twitter16 dataset than in the Twit-
+theTwitter15dataset. Therefore,webelievethatthenetworkcharacteristicsrevealedby
+ter15 dataset. Therefore, we believe that the network characteristics revealed by the Twit-
+theTwitter16datasetaremoreinlinewiththecharacteristicsdisplayedbydisinformation
+ter16 dataset are more in line with the characteristics displayed by disinformation and
+andnon-disinformationduringthepropagationprocess,wherekeyindicators,suchasthe
+non-disinformation during the propagation process, where key indicators, such as the
+numberofnodes,thenumberofedges,thegraphdiameter,andtheaveragepathlength
+ofdisinformation,arelargerthanthoseofnon-disinformation. Thatis,thereismoreuser
+participation,morefrequentforwardingofinformation,awiderdisseminationrange,and
+morecomplexdisseminationpathsinthedisseminationprocessofdisinformation. Dueto
+itsunrepresentativesamplefailingtoencompassabroaderormorebalancedrangeofuser
+groupsandmessagetypes,theTwitter15datasetmaynotexhibitnetworkcharacteristics
+consistent with theory. In summary, the Twitter16 dataset is more consistent with the
+characteristics of real rumor propagation, and our method is more valid for this type
+ofdata.
+
+Appl.Sci.2025,15,3457 18of21
+Inaddition,byanalyzingthecoefficientofcongruenceandnetworkdensityvalues,
+theanalysisrevealsthattheinformationdisseminationnetworkisalow-densityhetero-
+geneous network. In such a network structure, the connections between nodes are not
+tightlyconnected,butshowatendencytoconnectbetweenhighlyconnectednodesand
+lowlyconnectednodes. Thisphenomenonsuggeststhatasmallnumberofnodesinthe
+informationdisseminationnetwork,i.e.,thosehighlyconnectednodes,whichplayakey
+roleinthenetwork,haveasignificantimpactontheoverallperformanceofthenetwork.
+Further,basedontheanalysisofthedegreedistributiongraphinFigure6,wecanobserve
+thatthenodedegreedistributionsofbothdisinformationandnon-disinformationinthein-
+formationdisseminationnetworkexhibitsignificantlong-tailcharacteristics. Thatis,there
+areafewhighlyconnectednodesinthenetworkstructure,whichareusuallycalledopinion
+leadersorkeycommunicators,andtheyplayacrucialroleintheinformationdissemination
+process. Therefore, accurate identification of these key nodes will help to improve the
+accuracyandefficiencyofdetectionwhenperformingdisinformationdetection.
+4.6. Discussion
+Inthisstudy,weproposetheICP-BGCNmodel,aninnovativeapproachtodisinforma-
+tiondetection,whichintegratesoriginaltextcontent,propagationtext,andthestructural
+informationofmessagedissemination. OurexperimentsontheTwitter15,Twitter16,and
+PhemedatasetsdemonstratethatthefusionofsemanticfeaturesextractedviaBERTand
+propagationfeatureslearnedthroughabidirectionalgraphconvolutionalnetworkleadsto
+superiordetectionaccuracy. Notably,themodelachievesaccuraciesof89.7%onTwitter15
+and 91.7% on Twitter16, outperforming eight mainstream baselines by 1.1% and 3.7%,
+respectively,andmaintainsrobustgeneralizationwithan84.4%accuracyonthePheme
+dataset. Theseresultsstronglysupportouroriginalhypothesisthatleveragingbothtext
+semanticsandpropagationstructurecanenhancedisinformationdetection.
+Our work makes several key contributions that push the field forward. First, by
+embeddinginteractivedata,suchasusercommentsandretweets,intoagraphstructure,
+ICP-BGCNcapturesglobalcouplingfeaturesthattraditionalmodelsoftenoverlook. This
+methodologicaladvancementaddresseslimitationsidentifiedinearlierstudies[11,45]and
+opensnewavenuesforexploitingnetworktopologyinmisinformationanalysis. Second,
+thedetailedanalysisofpropagationmetrics—suchasdegreedistribution,diameter,and
+averagepathlength—providesfreshinsightsintothedistinctdisseminationpatternsofdis-
+informationversusnon-disinformation. Forexample,ourobservationthatdisinformation
+tendstoformlow-densityheterogeneousnetworkswithseveralhighlyconnectednodes
+not only explains the superior performance on the Twitter16 dataset but also suggests
+potentialindicatorsforearlydetectioninreal-worldapplications.
+Despitetheseadvances,ourstudyhaslimitationsthatmustbeacknowledged. One
+notablelimitationisthatthecurrentmodeldoesnotaccountforthetemporaldecayofpost
+influence,anaspectthatrequiresfurtherinvestigation.
+5. Conclusions
+Basedonthefusionoforiginaltextcontent,propagationtextcontentandthepropaga-
+tionstructure,weproposeaneffectivefalseinformationdetectionmodelcalledICP-BGCN
+that fuses message content with the propagation path. The BERT model is employed
+todiscernthedeepsemanticfeaturesoftheoriginaltextandthepropagationtext. The
+propagationstructureisintegratedwiththesemanticfeaturesofthetext,andthebidirec-
+tionalgraphconvolutionalneuralnetworkisusedtolearnthepropagationfeaturesfrom
+thesemanticininformation. Theobtainedpropagationfeaturesarecombinedwiththe
+enhancedsemanticfeaturesoftheoriginaltexttogeneratefusionfeatures,uponwhich
+
+Appl.Sci.2025,15,3457 19of21
+falseinformationdetectionisperformed. Toevaluatetherationalityandeffectivenessof
+ourICP-BGCNmodel,comparativeexperimentsareconductedonthepublicdatasetsTwit-
+ter15andTwitter16. Theexperimentalresultsshowthat,ingeneral,ourICP-BGCNmodel
+performsbetterthaneightbaselinemodels,suchasDTC.Tofurtherassessitsgeneralization
+capability, we validate the model on the Pheme dataset, achieving robust performance
+(84.4%accuracy)thatdemonstratescross-domainadaptability. Wecomparethepropaga-
+tionnetworkstructuresofdisinformationandnon-disinformationintheTwitter15and
+Twitter16datasets,andfindthatthedisinformationpropagationstructureexhibitsalow-
+densityhetero-collocationnetworkcharacterizedbymultiplenodeswithhighconnectivity.
+Inaddition,theTwitter16datasetshowsmoreobviouscharacteristicsinitsdisinformation
+propagation networks compared to the Twitter15 dataset, which partially explains the
+higherperformanceofourmodeloverthisdataset. Thisstudydidnottakeintoaccount
+thegraduallossofinfluenceofpostsovertime,whichwillbeconsideredinfutureworkto
+moreaccuratelymodelthedynamicprocessofinformationdissemination. Inaddition,we
+willfocusontheearlystagesofdisinformationpropagation,usingincompletepropagation
+structuresandlimitedinformationforearlydisinformationdetection.
+AuthorContributions:Conceptualization,M.Y.,J.H.(JieHu)andJ.H.(JianjunHu);methodology,
+M.Y.; software, M.Y.; validation, M.Y., B.T. and J.H. (Jianjun Hu); data curation, M.Y. and B.T.;
+writing—originaldraft,M.Y.;writing—reviewandediting,J.H.(JieHu),B.T.andJ.H.(JianjunHu);
+visualization,M.Y.,B.T.andJ.H.(JianjunHu);supervision,J.H.(JieHu).Allauthorshavereadand
+agreedtothepublishedversionofthemanuscript.
+Funding:ThisresearchwasfundedbytheGuizhouProvincialScienceandTechnologyFund(Qian
+KeheBasic-ZK[2021]General337),supportedbytheFundoftheStateKeyLaboratoryofPublicBig
+Data,GuizhouUniversity(No.PBD2023-35),andtheGraduateProgramofGuizhouUniversityof
+FinanceandEconomics(2022ZXSY036).
+InstitutionalReviewBoardStatement:Notapplicable.
+InformedConsentStatement:Notapplicable.
+DataAvailabilityStatement:Thedatasetsusedintheexperimentswerebasedonthetwopublicly
+available Twitter15 and Twitter16 datasets released by Ma et al. [38]. The raw datasets can be
+respectivelydownloadedfromhttps://www.dropbox.com/s/7ewzdrbelpmrnxu/rumdetect2017.
+zip?dl=0(accessedon1May2023).
+ConflictsofInterest:Theauthorsdeclarenoconflictsofinterest.
+References
+1. DataReportal.Digital2023:GlobalOverviewReport.Availableonline:https://datareportal.com/reports/digital-2023-global-
+overview-report(accessedon10December2023).
+2. Li,Q.;Cheng,L.;Wang,W.;Li,X.;Li,S.;Zhu,P.Influencemaximizationthroughexploringstructuralinformation.Appl.Math.
+Comput.2023,442,127721.
+3. Vosoughi,S.;Roy,D.;Aral,S.Thespreadoftrueandfalsenewsonline.Science2018,359,1146–1151.[PubMed]
+4. Tan,L.;Wang,G.;Jia,F.;Lian,X.Researchstatusofdeeplearningmethodsforrumordetection.Multimed.ToolsAppl.2023,82,
+2941–2982.[PubMed]
+5. Castillo,C.;Mendoza,M.;Poblete,B.Predictinginformationcredibilityintime-sensitivesocialmedia. InternetRes. 2013,23,
+560–588.
+6. Yang,F.;Liu,Y.;Yu,X.;Yang,M.Automaticdetectionofrumoronsinaweibo.InProceedingsoftheACMSIGKDDWorkshopon
+MiningDataSemantics,BeijingChina,12–16August2012;pp.1–7.
+7. Zhao,Z.;Resnick,P.;Mei,Q.Enquiringminds:Earlydetectionofrumorsinsocialmediafromenquiryposts.InProceedingsof
+the24thInternationalConferenceonWorldWideWeb,Florence,Italy,18–22May2015;pp.1395–1405.
+8. Ma,J.;Gao,W.;Mitra,P.;Kwon,S.;Jansen,B.J.;Wong,K.-F.;Cha,M.Detectingrumorsfrommicroblogswithrecurrentneural
+networks.InProceedingsofthe25thInternationalJointConferenceonArtificialIntelligence(IJCAI2016),NewYork,NY,USA,
+9–15July2016.
+
+Appl.Sci.2025,15,3457 20of21
+9. Kotteti,C.M.M.;Dong,X.;Qian,L.Ensembledeeplearningontime-seriesrepresentationoftweetsforrumordetectioninsocial
+media.Appl.Sci.2020,10,7541.[CrossRef]
+10. Khoo,L.M.S.;Chieu,H.L.;Qian,Z.;Jiang,J.Interpretablerumordetectioninmicroblogsbyattendingtouserinteractions.In
+ProceedingsoftheAAAIConferenceonArtificialIntelligence,NewYork,NY,USA,7–12February2020;pp.8783–8790.
+11. Bian,T.;Xiao,X.;Xu,T.;Zhao,P.;Huang,W.;Rong,Y.;Huang,J.Rumordetectiononsocialmediawithbi-directionalgraphcon-
+volutionalnetworks.InProceedingsoftheAAAIConferenceonArtificialIntelligence,NewYork,NY,USA,7–12February2020;
+pp.549–556.
+12. Rahimi,M.;Roayaei,M.Amulti-viewrumordetectionframeworkusingdynamicpropagationstructure,interactionnetwork,
+andcontent.IEEETrans.SignalInf.Process.Netw.2024,10,48–58.
+13. Li,J.;Li,W.;Gao,F.;Cai,M.;Zhang,Z.;Liu,X.;Wang,W.Socialcontagionsonhigher-ordercommunitynetworks.Appl.Math.
+Comput.2024,478,128832.
+14. Devlin,J.;Chang,M.-W.;Lee,K.;Toutanova,K.Bert:Pre-trainingofdeepbidirectionaltransformersforlanguageunderstanding.
+arXiv2018,arXiv:1810.04805.
+15. Tschiatschek, S.; Singla, A.; Gomez Rodriguez, M.; Merchant, A.; Krause, A. Fake news detection in social networks via
+crowdsignals.InProceedingsoftheCompanionProceedingsofthetheWebConference2018,Lyon,France,23–27April2018;
+pp.517–524.
+16. Hussain,M.G.;Hasan,M.R.;Rahman,M.;Protim,J.;AlHasan,S.Detectionofbanglafakenewsusingmnbandsvmclassifier.
+InProceedingsofthe2020InternationalConferenceonComputing,Electronics&CommunicationsEngineering(iCCECE),
+Bangalore,India,2–4July2020;pp.81–85.
+17. AntonyVijay,J.;AnwarBasha,H.;ArunNehru,J.Adynamicapproachfordetectingthefakenewsusingrandomforestclassifier
+andNLP.InComputationalMethodsandDataEngineering:ProceedingsofICMDE2020;Springer:Berlin/Heidelberg,Germany,2020;
+Volume2,pp.331–341.
+18. Choudhury,D.; Acharjee,T.Anovelapproachtofakenewsdetectioninsocialnetworksusinggeneticalgorithmapplying
+machinelearningclassifiers.Multimed.ToolsAppl.2023,82,9029–9045.
+19. Nasir,J.A.;Khan,O.S.;Varlamis,I.Fakenewsdetection:AhybridCNN-RNNbaseddeeplearningapproach.Int.J.Inf.Manag.
+DataInsights2021,1,100007.
+20. Shelke,S.;Attar,V.Rumordetectioninsocialnetworkbasedonuser,contentandlexicalfeatures.Multimed.ToolsAppl.2022,81,
+17347–17368.[PubMed]
+21. Yang,J.;Pan,Y.COVID-19RumorDetectiononSocialNetworksBasedonContentInformationandUserResponse.Front.Phys.
+2021,9,763081.
+22. Li,Y.C.;Qian,L.F.;Ma,J.EarlyDetectionofMicroBlogRumorsBasedonBERT-RCNNModel.Inf.Stud.TheoryAppl.2021,44,
+173–177.
+23. Feng,L.Z.;Liu,F.R.;Wang,Y.W.RumordetectionmethodbasedongraphconvolutionnetworkandAttentionMechanism.Data
+Anal.Knowl.Discov.2024,8,125–136.
+24. Chen,Y.;Sui,J.;Hu,L.;Gong,W.Attention-residualnetworkwithCNNforrumordetection.InProceedingsofthe28thACM
+InternationalConferenceonInformationandKnowledgeManagement,Beijing,China,3–7November2019;pp.1121–1130.
+25. Weng,C.-H.;Lin,K.-C.;Ying,J.-C.Detectionofchinesedeceptivereviewsbasedonpre-trainedlanguagemodel.Appl.Sci.2022,
+12,3338.[CrossRef]
+26. Lai,J.;Yang,X.;Luo,W.;Zhou,L.;Li,L.;Wang,Y.;Shi,X.RumorLLM:ARumorLargeLanguageModel-BasedFake-News-
+DetectionData-AugmentationApproach.Appl.Sci.2024,14,3532.[CrossRef]
+27. Salini,Y.;Harikiran,J.Multiplicativevectorfusionmodelfordetectingdeepfakenewsinsocialmedia.Appl.Sci.2023,13,4207.
+[CrossRef]
+28. Chen, T.; Chen, H.; Li, X. Rumor detection via recurrent neural networks: A case study on adaptivity with varied data
+compositions.InProceedingsoftheTrendsandApplicationsinKnowledgeDiscoveryandDataMining:PAKDD2018Workshops,
+BDASC,BDM,ML4Cyber,PAISI,DaMEMO,RevisedSelectedPapers22,Melbourne,VIC,Australia,3June2018;pp.121–127.
+29. Feng,W.;Li,Y.;Li,B.;Jia,Z.;Chu,Z.BiMGCL:Rumordetectionviabi-directionalmulti-levelgraphcontrastivelearning.PeerJ
+Comput.Sci.2023,9,e1659.
+30. Hu,D.;Wei,L.;Zhou,W.;Huai,X.;Han,J.;Hu,S.ARumorDetectionApproachBasedonMulti-RelationalPropagationTree.
+J.Comput.Res.Dev.2021,58,1395–1411.
+31. Qiang,Z.;Gu,Y.RumorDetectionModelBasedonDynamicPropagationandCommunityStructure.Comput.Eng.Appl.2024,60,
+198.
+32. Lin,H.;Yi,P.;Ma,J.;Jiang,H.;Luo,Z.;Shi,S.;Liu,R.Zero-shotrumordetectionwithpropagationstructureviapromptlearning.
+InProceedingsoftheAAAIConferenceonArtificialIntelligence,Washington,DC,USA,7–14February2023;pp.5213–5221.
+33. Lu,Y.-J.;Li,C.-T.GCAN:Graph-awareco-attentionnetworksforexplainablefakenewsdetectiononsocialmedia.arXiv2020,
+arXiv:2004.11648.
+
+Appl.Sci.2025,15,3457 21of21
+34. Huang, Q.; Yu, J.; Wu, J.; Wang, B. Heterogeneous graph attention networks for early detection of rumors on twitter. In
+Proceedingsofthe2020InternationalJointConferenceonNeuralNetworks(IJCNN),Glasgow,UK,19–24July2020;pp.1–8.
+35. Tao,X.;Wang,L.;Liu,Q.;Wu,S.;Wang,L.Semanticevolvementenhancedgraphautoencoderforrumordetection.InProceedings
+oftheACMWebConference2024,Singapore,13–17May2024;pp.4150–4159.
+36. Chang,Q.;Li,X.;Duan,Z.Anovelapproachforrumordetectioninsocialplatforms: Memory-augmentedtransformerwith
+graphconvolutionalnetworks.Knowl.-BasedSyst.2024,292,111625.
+37. Li,Q.;Han,Z.;Wu,X.-M.Deeperinsightsintographconvolutionalnetworksforsemi-supervisedlearning.InProceedingsofthe
+AAAIConferenceonArtificialIntelligence,NewOrleans,LA,USA,2–7February2018.
+38. Ma,J.;Gao,W.;Wong,K.-F.Detectrumorsinmicroblogpostsusingpropagationstructureviakernellearning.InProceedingsof
+the55thAnnualMeetingoftheAssociationforComputationalLinguistics(ACL2017),Vancouver,BC,Canada,30July–4August
+2017.
+39. Zubiaga, A.; Liakata, M.; Procter, R.Exploiting contextfor rumourdetection insocial media. In Proceedings ofthe Social
+Informatics:9thInternationalConference,SocInfo2017,Oxford,UK,PartI9,13–15September2017;Proceedings;pp.109–123.
+40. Derczynski,L.;Bontcheva,K.;Liakata,M.;Procter,R.;Hoi,G.W.S.;Zubiaga,A.SemEval-2017Task8:RumourEval:Determining
+rumourveracityandsupportforrumours.arXiv2017,arXiv:1704.05972.
+41. Castillo,C.;Mendoza,M.;Poblete,B.Informationcredibilityontwitter.InProceedingsofthe20thInternationalConferenceon
+WorldWideWeb,Hyderabad,India,28March–1April2011;pp.675–684.
+42. Ma,J.;Gao,W.;Wong,K.-F.Rumordetectionontwitterwithtree-structuredrecursiveneuralnetworks.InProceedingsofthe
+201856thAnnualMeetingoftheAssociationforComputationalLinguistics(ACL),Melbourne,Australia,26–28March2018.
+43. Liu,Y.;Wu,Y.-F.Earlydetectionoffakenewsonsocialmediathroughpropagationpathclassificationwithrecurrentandconvo-
+lutionalnetworks.InProceedingsoftheAAAIConferenceonArtificialIntelligence,NewOrleans,LA,USA,2–7February2018.
+44. Cai,X.;Tohti,T.;Hamdulla,A.ARumorDetectionMethodIncorporatingCorrelationFeatures.InProceedingsofthe20223rd
+InternationalConferenceonPatternRecognitionandMachineLearning(PRML),Chengdu,China,22–24July2022;pp.328–333.
+45. Xu,S.;Liu,X.;Ma,K.;Dong,F.;Riskhan,B.;Xiang,S.;Bing,C.Rumordetectiononsocialmediausinghierarchicallyaggregated
+featureviagraphneuralnetworks.Appl.Intell.2023,53,3136–3149.
+46. Kochkina,E.;Liakata,M.;Zubiaga,A.All-in-one:Multi-tasklearningforrumourverification.arXiv2018,arXiv:1806.03713.
+47. Askarizade,M.Enhancingrumordetectionwithdataaugmentationandgenerativepre-trainedtransformer.ExpertSyst.Appl.
+2025,262,125649.
+48. Vu,D.T.;Jung,J.J.Rumordetectionbypropagationembeddingbasedongraphconvolutionalnetwork.Int.J.Comput.Intell.Syst.
+2021,14,1053–1065.
+49. Ma,J.;Li,J.;Gao,W.;Yang,Y.;Wong,K.-F.Improvingrumordetectionbypromotinginformationcampaignswithtransformer-
+basedgenerativeadversariallearning.IEEETrans.Knowl.DataEng.2021,35,2657–2670.
+50. Yu,J.;Jiang,J.;Khoo,L.M.S.;Chieu,H.L.;Xia,R.Coupledhierarchicaltransformerforstance-awarerumorverificationinsocial
+mediaconversations. InProceedingsofthe2020ConferenceonEmpiricalMethodsinNaturalLanguageProcessing,Virtual
+Conference,16–20November2020.
+51. Luo,N.;Xie,D.;Mo,Y.;Li,F.;Teng,C.;Ji,D.Jointrumourandstanceidentificationbasedonsemanticandstructuralinformation
+insocialnetworks.Appl.Intell.2024,54,264–282.
+52. Cui, C.; Jia, C. Propagation Tree Is Not Deep: Adaptive Graph Contrastive Learning Approach for Rumor Detection. In
+ProceedingsoftheAAAIConferenceonArtificialIntelligence,Vancouver,BC,Canada,20–27February2024;pp.73–81.
+53. Juul,J.L.;Ugander,J.Comparinginformationdiffusionmechanismsbymatchingoncascadesize.Proc.Natl.Acad.Sci.USA2021,
+118,e2100786118.
+54. Hou,D.;Yin,S.;Gao,C.;Li,X.;Wang,Z.PropagationDynamicsofRumorvs.Non-rumoracrossMultipleSocialMediaPlatforms
+DrivenbyUserCharacteristics.arXiv2024,arXiv:2401.17840.
+Disclaimer/Publisher’sNote: Thestatements, opinionsanddatacontainedinallpublicationsaresolelythoseoftheindividual
+author(s)andcontributor(s)andnotofMDPIand/ortheeditor(s).MDPIand/ortheeditor(s)disclaimresponsibilityforanyinjuryto
+peopleorpropertyresultingfromanyideas,methods,instructionsorproductsreferredtointhecontent.

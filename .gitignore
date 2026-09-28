@@ -120,3 +120,6 @@
 # Logs & Debug Traces
 **/*.log
 **/logs/
+
+# MLflow run tracking
+**/mlruns/

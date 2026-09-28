@@ -1,0 +1,57 @@
+import logging
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+from app.api.routes import router
+from app.core.limiter import limiter
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+app = FastAPI(
+    title="AI Assistant – W15 + W16 Agent API",
+    description=(
+        "Production-grade RAG assistant (W15) extended with a bounded "
+        "cross-source verification agent (W16 Task 3). "
+        "Legacy endpoint: POST /api/v1/chat. "
+        "Agent endpoint: POST /api/v1/agent/chat."
+    ),
+    version="3.0.0",
+)
+
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+app.include_router(router, prefix="/api/v1")
+
+
+@app.get("/")
+def root():
+    return {
+        "message": "AI Assistant API v3.0 – see /docs",
+        "endpoints": {
+            "legacy_chat": "POST /api/v1/chat",
+            "agent_chat": "POST /api/v1/agent/chat",
+            "ingest_file": "POST /api/v1/ingest/file",
+            "ingest_text": "POST /api/v1/ingest/text",
+            "health": "GET /api/v1/health",
+        },
+    }

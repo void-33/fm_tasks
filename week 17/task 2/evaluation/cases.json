@@ -1,0 +1,230 @@
+[
+  {
+    "id": "TC-01",
+    "name": "Single-source factual query",
+    "description": "One search then final. Answer found in one document.",
+    "question": "What is the return window in policy A?",
+    "selected_sources": ["policy-a.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "return window", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "final", "answer": "Policy A allows returns within 30 days.", "citations": ["policy-a.txt_0"]}
+    ],
+    "scripted_tool_results": [
+      [{"chunk_id": "policy-a.txt_0", "source": "policy-a.txt", "excerpt": "Returns accepted within 30 days of purchase.", "score": 0.92, "query": "return window"}]
+    ],
+    "oracle": {
+      "expected_status": "completed",
+      "expected_min_iterations": 2,
+      "expected_max_iterations": 2,
+      "expected_tool_sequence": ["retrieve_chunks"],
+      "expected_sources_cited": ["policy-a.txt"]
+    }
+  },
+  {
+    "id": "TC-02",
+    "name": "Cross-source comparison",
+    "description": "Two searches on different sources then final. Proves model selected different sources.",
+    "question": "Compare refund policies in policy-a.txt and policy-b.txt.",
+    "selected_sources": ["policy-a.txt", "policy-b.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "refund policy", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "search", "query": "refund policy", "selected_sources": ["policy-b.txt"], "top_k": 3},
+      {"action": "final", "answer": "Policy A: 30 days. Policy B: 14 days.", "citations": ["policy-a.txt_0", "policy-b.txt_0"]}
+    ],
+    "scripted_tool_results": [
+      [{"chunk_id": "policy-a.txt_0", "source": "policy-a.txt", "excerpt": "Refunds accepted within 30 days.", "score": 0.9, "query": "refund policy"}],
+      [{"chunk_id": "policy-b.txt_0", "source": "policy-b.txt", "excerpt": "Refunds accepted within 14 days.", "score": 0.87, "query": "refund policy"}]
+    ],
+    "oracle": {
+      "expected_status": "completed",
+      "expected_min_iterations": 3,
+      "expected_max_iterations": 3,
+      "expected_tool_sequence": ["retrieve_chunks", "retrieve_chunks"],
+      "expected_sources_cited": ["policy-a.txt", "policy-b.txt"]
+    }
+  },
+  {
+    "id": "TC-03",
+    "name": "Conflicting evidence",
+    "description": "Model finds conflict between sources and reports it rather than hallucinating.",
+    "question": "What is the refund period?",
+    "selected_sources": ["policy-a.txt", "policy-c.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "refund period", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "search", "query": "refund period", "selected_sources": ["policy-c.txt"], "top_k": 3},
+      {"action": "final", "answer": "Sources conflict: policy-a.txt says 30 days; policy-c.txt says 60 days. Please verify with the relevant department.", "citations": ["policy-a.txt_0", "policy-c.txt_0"]}
+    ],
+    "scripted_tool_results": [
+      [{"chunk_id": "policy-a.txt_0", "source": "policy-a.txt", "excerpt": "Refunds must be requested within 30 days.", "score": 0.91, "query": "refund period"}],
+      [{"chunk_id": "policy-c.txt_0", "source": "policy-c.txt", "excerpt": "All refund requests are accepted up to 60 days.", "score": 0.88, "query": "refund period"}]
+    ],
+    "oracle": {
+      "expected_status": "completed",
+      "expected_min_iterations": 3,
+      "expected_max_iterations": 4,
+      "expected_tool_sequence": ["retrieve_chunks", "retrieve_chunks"],
+      "expected_sources_cited": ["policy-a.txt", "policy-c.txt"]
+    }
+  },
+  {
+    "id": "TC-04",
+    "name": "Ambiguous request — clarification",
+    "description": "Request is genuinely ambiguous; model asks for clarification without fabricating an answer.",
+    "question": "Compare the documents.",
+    "selected_sources": null,
+    "scripted_model_actions": [
+      {"action": "clarify", "question": "Which documents would you like me to compare? Please specify the source names."}
+    ],
+    "scripted_tool_results": [],
+    "oracle": {
+      "expected_status": "needs_clarification",
+      "expected_min_iterations": 1,
+      "expected_max_iterations": 1,
+      "expected_tool_sequence": [],
+      "expected_sources_cited": []
+    }
+  },
+  {
+    "id": "TC-05",
+    "name": "No relevant evidence",
+    "description": "Search returns empty; agent reports insufficient evidence.",
+    "question": "What is the warranty period for product X?",
+    "selected_sources": ["policy-a.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "warranty period product X", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "clarify", "question": "I could not find warranty information in the uploaded documents. Could you upload a warranty document or rephrase your question?"}
+    ],
+    "scripted_tool_results": [
+      []
+    ],
+    "oracle": {
+      "expected_status": "needs_clarification",
+      "expected_min_iterations": 2,
+      "expected_max_iterations": 2,
+      "expected_tool_sequence": ["retrieve_chunks"],
+      "expected_sources_cited": []
+    }
+  },
+  {
+    "id": "TC-06",
+    "name": "Revised query — better search term",
+    "description": "First search is weak; model revises query and succeeds on second attempt.",
+    "question": "Can I get my money back?",
+    "selected_sources": ["policy-a.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "money back", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "search", "query": "refund return policy", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "final", "answer": "Yes, you can get a refund within 30 days.", "citations": ["policy-a.txt_0"]}
+    ],
+    "scripted_tool_results": [
+      [],
+      [{"chunk_id": "policy-a.txt_0", "source": "policy-a.txt", "excerpt": "Refunds accepted within 30 days of purchase.", "score": 0.89, "query": "refund return policy"}]
+    ],
+    "oracle": {
+      "expected_status": "completed",
+      "expected_min_iterations": 3,
+      "expected_max_iterations": 3,
+      "expected_tool_sequence": ["retrieve_chunks", "retrieve_chunks"],
+      "expected_sources_cited": ["policy-a.txt"]
+    }
+  },
+  {
+    "id": "TC-07",
+    "name": "Invalid action JSON — repair",
+    "description": "Model emits invalid JSON; one repair prompt is issued; if still invalid → bounded_failure.",
+    "question": "What are the shipping costs?",
+    "selected_sources": null,
+    "scripted_model_actions": [
+      "Sorry, I cannot determine the shipping costs.",
+      "I still do not know."
+    ],
+    "scripted_tool_results": [],
+    "oracle": {
+      "expected_status": "bounded_failure",
+      "expected_min_iterations": 1,
+      "expected_max_iterations": 1,
+      "expected_tool_sequence": [],
+      "expected_sources_cited": [],
+      "expected_failure_phases": ["parse_action", "repair_action"]
+    }
+  },
+  {
+    "id": "TC-08",
+    "name": "Tool unavailable — injected timeout",
+    "description": "Retrieval tool raises ToolError (simulated timeout). Agent records failure and does not produce a confident answer.",
+    "question": "What is the cancellation policy?",
+    "selected_sources": ["policy-a.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "cancellation policy", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "final", "answer": "The cancellation policy is 48 hours notice.", "citations": []}
+    ],
+    "scripted_tool_results": "INJECT_TIMEOUT",
+    "oracle": {
+      "expected_status": "insufficient_evidence",
+      "expected_min_iterations": 1,
+      "expected_max_iterations": 2,
+      "expected_tool_sequence": ["retrieve_chunks"],
+      "expected_sources_cited": [],
+      "expected_failure_phases": ["tool_error"],
+      "assert_no_confident_answer": true
+    }
+  },
+  {
+    "id": "TC-09",
+    "name": "Malformed retrieval output — missing metadata",
+    "description": "Retrieval returns chunks with missing chunk_id/source; agent normalizes and does not fabricate citations.",
+    "question": "What are the late fees?",
+    "selected_sources": ["policy-a.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "late fees", "selected_sources": ["policy-a.txt"], "top_k": 3},
+      {"action": "final", "answer": "Late fees are $10 per month.", "citations": ["malformed_chunk"]}
+    ],
+    "scripted_tool_results": [
+      [{"chunk_id": "", "source": "", "excerpt": "Late fee information.", "score": null, "query": "late fees"}]
+    ],
+    "oracle": {
+      "expected_status": "insufficient_evidence",
+      "expected_min_iterations": 2,
+      "expected_max_iterations": 2,
+      "expected_tool_sequence": ["retrieve_chunks"],
+      "expected_sources_cited": [],
+      "assert_no_hard_crash": true
+    }
+  },
+  {
+    "id": "TC-10",
+    "name": "Infinite loop attempt — max steps detection",
+    "description": "Model keeps searching; max-step and max-search caps terminate the loop.",
+    "question": "Search forever.",
+    "selected_sources": ["policy-a.txt"],
+    "scripted_model_actions": [
+      {"action": "search", "query": "query 1", "top_k": 2},
+      {"action": "search", "query": "query 2", "top_k": 2},
+      {"action": "search", "query": "query 3", "top_k": 2},
+      {"action": "search", "query": "query 4", "top_k": 2},
+      {"action": "search", "query": "query 5", "top_k": 2},
+      {"action": "search", "query": "query 6", "top_k": 2},
+      {"action": "search", "query": "query 7", "top_k": 2}
+    ],
+    "scripted_tool_results": [[], [], [], [], [], [], []],
+    "oracle": {
+      "expected_status": "insufficient_evidence",
+      "expected_max_iterations": 6,
+      "expected_tool_sequence": ["retrieve_chunks", "retrieve_chunks", "retrieve_chunks", "retrieve_chunks"],
+      "assert_no_infinite_loop": true
+    }
+  },
+  {
+    "id": "TC-11",
+    "name": "Cache separation — legacy vs agent same message",
+    "description": "Verifies chat: and agent: keys are different for the same message string.",
+    "question": "What is the return policy?",
+    "type": "unit",
+    "oracle": {
+      "expected_chat_key_prefix": "chat:",
+      "expected_agent_key_prefix": "agent:",
+      "keys_must_differ": true
+    }
+  }
+]
+

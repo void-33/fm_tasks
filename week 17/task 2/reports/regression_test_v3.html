@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>Regression Test — Prompt v3</title></head>
+<body>
+<h1>Regression Test Results — Prompt v3</h1>
+<p><strong>Overall:</strong> 5/5 passed (100.0%) — PASS ✓</p>
+<p><strong>Promotion threshold:</strong> 60%</p>
+<table border="1" cellpadding="6" style="border-collapse:collapse; width:100%">
+  <thead>
+    <tr>
+      <th>Query</th><th>Golden Reference</th><th>New Response</th>
+      <th>Pass</th><th>Overlap Score</th>
+    </tr>
+  </thead>
+  <tbody>
+        <tr>
+          <td>What is the return window in policy A?</td>
+          <td style='color:gray'>Policy A allows returns within 30 days of purchase.</td>
+          <td style='color:green'>Policy A allows returns within 30 days.</td>
+          <td>✓</td>
+          <td>0.67</td>
+        </tr>
+        <tr>
+          <td>Compare refund policies in policy-a.txt and policy-b.txt.</td>
+          <td style='color:gray'>Policy A allows returns within 30 days. Policy B accepts refunds within 14 days. Policy A offers a longer return window.</td>
+          <td style='color:green'>After searching both documents: Policy A offers a 30-day return window, while Policy B offers 14 days.</td>
+          <td>✓</td>
+          <td>0.47</td>
+        </tr>
+        <tr>
+          <td>What is the refund period?</td>
+          <td style='color:gray'>Sources conflict: policy-a.txt states 30 days while policy-c.txt states 60 days. The applicable period depends on which policy governs your situation.</td>
+          <td style='color:green'>The evidence shows conflicting information: policy-a.txt says 30 days, policy-c.txt says 60 days. Please clarify which policy applies.</td>
+          <td>✓</td>
+          <td>0.40</td>
+        </tr>
+        <tr>
+          <td>Can I get my money back?</td>
+          <td style='color:gray'>Yes, you can get a refund within 30 days of purchase according to Policy A.</td>
+          <td style='color:green'>Yes, you can get a refund. Policy A accepts returns within 30 days of purchase.</td>
+          <td>✓</td>
+          <td>0.67</td>
+        </tr>
+        <tr>
+          <td>What is the warranty period for product X?</td>
+          <td style='color:gray'>I could not find warranty information in the uploaded documents. Please upload a warranty document or contact support.</td>
+          <td style='color:green'>No warranty information was found in the uploaded documents. I tried multiple search terms. Please upload the relevant warranty document.</td>
+          <td>✓</td>
+          <td>0.53</td>
+        </tr></tbody>
+</table>
+<p><em>Scoring method: word overlap ratio (threshold 0.4). 
+For LLM-as-judge, set GEMINI_API_KEY and use evidently[llm] BinaryClassificationPromptTemplate.</em></p>
+</body></html>
