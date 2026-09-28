@@ -16,8 +16,12 @@ uv sync
 uv run python src/train.py      # Train 3 models, log to MLflow, register best
 uv run python src/monitor.py    # Run drift monitoring (generates HTML reports)
 uv run uvicorn src.serve:app --reload --port 5001  # Serve registered model
-uv run mlflow ui --backend-store-uri mlruns        # View MLflow UI at http://127.0.0.1:5000
+MLFLOW_ALLOW_FILE_STORE=true uv run mlflow ui --backend-store-uri mlruns  # View MLflow UI at http://127.0.0.1:5000
 ```
+
+MLflow 3 requires an explicit opt-in when using the local filesystem tracking
+store. Task 1 intentionally keeps the plan's local `mlruns/` backend, so use
+the `MLFLOW_ALLOW_FILE_STORE=true` prefix whenever starting the MLflow UI.
 
 
 ## a. Environment & Reproducibility (uv)
@@ -54,4 +58,36 @@ Airflow orchestration is implemented in `airflow/dags/churn_pipeline_dag.py` as 
 - **Tasks**:
   1. `drift_check`: Executes `uv run python src/monitor.py` to evaluate reference vs. incoming production data. If dataset-level drift is detected (`dataset_drift: True` in the output), an XCom flag `drift_detected` is set to `True`.
   2. `retrain_model`: Triggered downstream of `drift_check`. Reads the XCom flag; if drift was flagged, it runs `uv run python src/train.py` to retrain the candidate models on fresh data and register/promote the updated best model. If no drift is detected, retraining is skipped.
+
+## MLflow Evidence
+
+The following screenshots were captured from the local MLflow UI after running the training and monitoring pipelines.
+
+### Model comparison
+
+The `telco_churn_v1` experiment shows the three trained models and their recorded metrics. Logistic Regression has the highest ROC-AUC and F1 score.
+
+![Task 1 MLflow model comparison](assets/Screenshot_20260928_115347.png)
+
+### Individual model metrics
+
+![Logistic Regression metrics](assets/Screenshot_20260928_114514.png)
+
+![Random Forest metrics](assets/Screenshot_20260928_114641.png)
+
+![Gradient Boosting metrics](assets/Screenshot_20260928_114711.png)
+
+### Model registration
+
+The registered model `telco_churn_model` is linked to the Logistic Regression run.
+
+![Registered model versions](assets/Screenshot_20260928_114830.png)
+
+![Registered model details](assets/Screenshot_20260928_114928.png)
+
+### Drift monitoring
+
+The `telco_churn_drift` experiment contains the completed drift monitoring run.
+
+![Drift monitoring run](assets/Screenshot_20260928_115017.png)
 

@@ -311,3 +311,27 @@ Airflow orchestration is implemented in `airflow/dags/agent_regression_dag.py`:
   3. `alert_regression`: Triggered if the pass rate falls below 60%, emitting an alert that a behavioral regression has occurred and blocking automatic prompt promotion.
   4. `mark_passing`: Triggered when regression checks meet or exceed 60%, confirming that the prompt is safe for staging.
 
+## MLflow Evidence
+
+The following screenshots were captured from the local MLflow UI after running the Week 17 experiment and regression scripts.
+
+### Prompt experiment comparison
+
+The `agent_prompt_experiments` experiment shows the three prompt runs and the regression-test runs together. The prompt runs completed all 11 deterministic cases with 100% tool correctness; the regression runs show v3 reaching 100% on the five-case golden set.
+
+![Task 2 MLflow prompt experiment comparison](assets/Screenshot_20260928_115805.png)
+
+### Prompt artifact
+
+The v3 run stores the exact prompt file used for the experiment as an MLflow artifact.
+
+![Prompt v3 artifact](assets/Screenshot_20260928_115857.png)
+
+### Evaluation traces
+
+The v3 run stores structured traces for the evaluation cases, including status, iterations, search calls, and token usage.
+
+![Prompt v3 evaluation traces](assets/Screenshot_20260928_115923.png)
+
+![Prompt v3 successful trace](assets/Screenshot_20260928_115936.png)
+
